@@ -735,6 +735,34 @@
 				[b]Note:[/b] As annotations describe their subject, the [annotation @tool] annotation must be placed before the class definition and inheritance.
 			</description>
 		</annotation>
+		<annotation name="@tool_button">
+			<return type="void" />
+			<param index="0" name="text" type="String" default="&quot;&quot;" />
+			<param index="1" name="icon" type="StringName" default="&quot;&quot;" />
+			<description>
+				Mark a function to be displayed as a clickable button in the inspector when running the editor. The parameters are optional and can be used to customize the button.
+				If [param text] is specified it is used as the label text of the button. If [param text] is unspecified then the label text will be derived from the name of the annotated function and automatically capitalized.
+				If [param icon] is specified it is used to fetch a suitable icon texture for the button via [method Control.get_theme_icon] by selecting the desired [param icon] from the [code]"EditorIcons"[/code] theme type. If [param icon] is unspecified the default [code]"Callable"[/code] icon will be used instead.
+				The first parameter of the annotated function is also optional and is an [EditorUndoRedoManager]. Consider using the optionally passed [EditorUndoRedoManager] to allow the action to be reverted safely. The code snippet below demonstrates this:
+				[codeblock]
+				@tool
+				extends Sprite2D
+
+				@tool_button
+				func toot():
+				    print("toot!")
+
+				@tool_button("Randomize the color!", "ColorRect")
+				func randomize_color(undo_redo):
+				    undo_redo.create_action("Randomized Sprite2D Color")
+				    undo_redo.add_do_property(self, &amp;"self_modulate", Color(randf(), randf(), randf()))
+				    undo_redo.add_undo_property(self, &amp;"self_modulate", self_modulate)
+				    undo_redo.commit_action()
+				[/codeblock]
+				[b]Note:[/b] When implementing undo/redo make sure to provide separate [code]do[/code] and [code]undo[/code] methods that perform and reverse the action respectively.
+				[b]Note:[/b] When exporting a project neither [EditorInterface] nor [EditorUndoRedoManager] can be resolved as a valid class name and can cause scripts to break. If you wish to support undo/redo in the editor [i]and[/i] export a project that contains a scene that uses this annotation you can either re-type the [code]undo_redo[/code] object as a [Variant] or omit the static type from the declaration.
+			</description>
+		</annotation>
 		<annotation name="@warning_ignore" qualifiers="vararg">
 			<return type="void" />
 			<param index="0" name="warning" type="String" />
