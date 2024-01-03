@@ -48,7 +48,7 @@ LIGHTMAP_BICUBIC_FILTER = false
 
 #include "stdlib_inc.glsl"
 
-#if !defined(MODE_RENDER_DEPTH) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) ||defined(LIGHT_CLEARCOAT_USED) ||defined(USE_VERTEX_LIGHTING)
+#if !defined(MODE_RENDER_DEPTH) || defined(TANGENT_USED) || defined(NORMAL_MAP_USED) || defined(LIGHT_ANISOTROPY_USED) || defined(LIGHT_CLEARCOAT_USED) || defined(USE_VERTEX_LIGHTING)
 #ifndef NORMAL_USED
 #define NORMAL_USED
 #endif
@@ -345,7 +345,6 @@ void main() {
 	highp vec3 vertex = vertex_angle_attrib.xyz * compressed_aabb_size + compressed_aabb_position;
 
 	highp mat4 model_matrix = world_transform;
-
 
 #ifdef USE_INSTANCING
 	highp mat4 m = mat4(instance_xform0, instance_xform1, instance_xform2, vec4(0.0, 0.0, 0.0, 1.0));
