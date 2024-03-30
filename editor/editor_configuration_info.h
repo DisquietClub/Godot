@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_string_names.h                                                 */
+/*  editor_configuration_info.h                                           */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,32 +28,28 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef EDITOR_STRING_NAMES_H
-#define EDITOR_STRING_NAMES_H
+#ifndef EDITOR_CONFIGURATION_INFO_H
+#define EDITOR_CONFIGURATION_INFO_H
 
-#include "core/string/string_name.h"
+#include "core/object/ref_counted.h"
+#include "core/string/ustring.h"
 
-class EditorStringNames {
-	static EditorStringNames *singleton;
-
-	EditorStringNames();
-
+class EditorConfigurationInfo {
 public:
-	static void create() { singleton = memnew(EditorStringNames); }
-	static void free() {
-		memdelete(singleton);
-		singleton = nullptr;
-	}
+	EditorConfigurationInfo() {}
 
-	_FORCE_INLINE_ static EditorStringNames *get_singleton() { return singleton; }
+	static Array get_configuration_info_dicts(Object *p_object);
+	static String get_max_severity(const Array &p_config_info_dicts);
+	static String get_severity_icon(const String &p_severity);
 
-	StringName configuration_info_changed;
-	StringName Editor;
-	StringName EditorFonts;
-	StringName EditorIcons;
-	StringName EditorStyles;
+	static Dictionary convert_string_to_dict(const String &p_config_info_string);
+	static Array filter_dict_list_for_property(const Array &p_config_info_dicts, const String &p_property_name);
+
+	static String format_dict_as_string(const Dictionary &p_config_info, bool p_wrap_lines, bool p_prefix_property_name);
+	static String format_dict_list_as_string(const Array &p_config_info_dicts, bool p_wrap_lines, bool p_prefix_property_name);
+
+private:
+	static Array convert_mixed_array_to_dict(const Array &p_mixed_config_infos);
 };
 
-#define EditorStringName(m_name) EditorStringNames::get_singleton()->m_name
-
-#endif // EDITOR_STRING_NAMES_H
+#endif // EDITOR_CONFIGURATION_INFO_H
