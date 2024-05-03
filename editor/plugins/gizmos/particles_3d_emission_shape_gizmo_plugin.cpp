@@ -314,11 +314,6 @@ void Particles3DEmissionShapeGizmoPlugin::set_handle(const EditorNode3DGizmo *p_
 			}
 			r_box_size[axis] = MAX(r_box_size[axis], 0.001);
 
-			// TODO: Remove unused variable
-			//Vector3 offset;
-			//offset[axis] = (pos_end + neg_end) * 0.5;
-			//Vector3 r_box_position = gt.xform(offset);
-
 			particles->set_emission_box_extents(r_box_size);
 		} else if (shape == CPUParticles3D::EMISSION_SHAPE_RING) {
 			Vector3 ring_axis = particles->get_emission_ring_axis();
@@ -535,11 +530,13 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 				Vector<Vector3> handles;
 				Vector<int> ids;
-				handles.push_back(Vector3(r, 0, 0));
+				handles.push_back(Vector3(r * scale.x + offset.x, offset.y, offset.z));
 				ids.push_back(0);
 
-				p_gizmo->add_lines(points, material);
-				p_gizmo->add_handles(handles, handles_material, ids);
+				if (p_gizmo->is_selected()) {
+					p_gizmo->add_lines(points, material);
+					p_gizmo->add_handles(handles, handles_material, ids);
+				}
 			} else if (shape == ParticleProcessMaterial::EMISSION_SHAPE_BOX) {
 				Vector3 offset = mat->get_emission_shape_offset();
 				Vector3 scale = mat->get_emission_shape_scale();
@@ -557,10 +554,18 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 					lines.push_back(b * 2.0 * scale * box_extents + offset);
 				}
 
-				Vector<Vector3> handles = helper->box_get_handles(mat->get_emission_box_extents() * 2.0);
+				Vector<Vector3> handles;
+				handles.push_back(Vector3(box_extents[0] * scale[0] + offset[0], offset[1], offset[2]));
+				handles.push_back(Vector3(-box_extents[0] * scale[0] + offset[0], offset[1], offset[2]));
+				handles.push_back(Vector3(offset[0], box_extents[1] * scale[1] + offset[1], offset[2]));
+				handles.push_back(Vector3(offset[0], -box_extents[1] * scale[1] + offset[1], offset[2]));
+				handles.push_back(Vector3(offset[0], offset[1], box_extents[2] * scale[2] + offset[2]));
+				handles.push_back(Vector3(offset[0], offset[1], -box_extents[2] * scale[2] + offset[2]));
 
-				p_gizmo->add_lines(lines, material);
-				p_gizmo->add_handles(handles, handles_material);
+				if (p_gizmo->is_selected()) {
+					p_gizmo->add_lines(lines, material);
+					p_gizmo->add_handles(handles, handles_material);
+				}
 			} else if (shape == ParticleProcessMaterial::EMISSION_SHAPE_RING) {
 				Vector3 offset = mat->get_emission_shape_offset();
 				Vector3 scale = mat->get_emission_shape_scale();
@@ -619,15 +624,17 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 				Vector<Vector3> handles;
 				Vector<int> ids;
-				handles.push_back(Vector3(0, 0, half_ring_height));
+				handles.push_back(Vector3(offset.x, offset.y, half_ring_height * scale.z + offset.z));
 				ids.push_back(1);
-				handles.push_back(Vector3(ring_radius, 0, 0));
+				handles.push_back(Vector3(ring_radius * scale.x + offset.x, offset.y, offset.z));
 				ids.push_back(2);
-				handles.push_back(Vector3(ring_inner_radius, 0, 0));
+				handles.push_back(Vector3(ring_inner_radius * scale.x + offset.x, offset.y, offset.z));
 				ids.push_back(3);
 
-				p_gizmo->add_lines(points, material);
-				p_gizmo->add_handles(handles, handles_material, ids);
+				if (p_gizmo->is_selected()) {
+					p_gizmo->add_lines(points, material);
+					p_gizmo->add_handles(handles, handles_material, ids);
+				}
 			}
 		}
 	} else if (Object::cast_to<CPUParticles3D>(p_gizmo->get_node_3d())) {
@@ -659,8 +666,10 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			handles.push_back(Vector3(r, 0, 0));
 			ids.push_back(0);
 
-			p_gizmo->add_lines(points, material);
-			p_gizmo->add_handles(handles, handles_material, ids);
+			if (p_gizmo->is_selected()) {
+				p_gizmo->add_lines(points, material);
+				p_gizmo->add_handles(handles, handles_material, ids);
+			}
 		} else if (shape == CPUParticles3D::EMISSION_SHAPE_BOX) {
 			Vector3 box_extents = particles->get_emission_box_extents();
 			Ref<BoxMesh> box = memnew(BoxMesh);
@@ -677,8 +686,10 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 
 			Vector<Vector3> handles = helper->box_get_handles(particles->get_emission_box_extents() * 2.0);
 
-			p_gizmo->add_lines(lines, material);
-			p_gizmo->add_handles(handles, handles_material);
+			if (p_gizmo->is_selected()) {
+				p_gizmo->add_lines(lines, material);
+				p_gizmo->add_handles(handles, handles_material);
+			}
 		} else if (shape == CPUParticles3D::EMISSION_SHAPE_RING) {
 			float ring_height = particles->get_emission_ring_height();
 			float half_ring_height = ring_height / 2;
@@ -741,8 +752,10 @@ void Particles3DEmissionShapeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 			handles.push_back(Vector3(ring_inner_radius, 0, 0));
 			ids.push_back(3);
 
-			p_gizmo->add_lines(points, material);
-			p_gizmo->add_handles(handles, handles_material, ids);
+			if (p_gizmo->is_selected()) {
+				p_gizmo->add_lines(points, material);
+				p_gizmo->add_handles(handles, handles_material, ids);
+			}
 		}
 	}
 }
