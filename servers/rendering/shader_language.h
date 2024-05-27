@@ -415,6 +415,7 @@ public:
 	struct VariableNode : public Node {
 		DataType datatype_cache = TYPE_VOID;
 		StringName name;
+		StringName rname;
 		StringName struct_name;
 		bool is_const = false;
 		bool is_local = false;
@@ -592,6 +593,7 @@ public:
 
 		struct Function {
 			StringName name;
+			StringName rname;
 			FunctionNode *function = nullptr;
 			HashSet<StringName> uses_function;
 			bool callable;
@@ -717,6 +719,7 @@ public:
 		};
 
 		StringName name;
+		StringName rname;
 		DataType return_type = TYPE_VOID;
 		StringName return_struct_name;
 		DataPrecision return_precision = PRECISION_DEFAULT;
@@ -925,6 +928,7 @@ private:
 
 	Vector<FilePosition> include_positions;
 	HashSet<String> include_markers_handled;
+	HashMap<StringName, int> function_overloads;
 
 	// Additional function information (eg. call hierarchy). No need to expose it to compiler.
 	struct CallInfo {
