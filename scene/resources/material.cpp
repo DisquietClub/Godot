@@ -373,15 +373,7 @@ void ShaderMaterial::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 bool ShaderMaterial::_property_can_revert(const StringName &p_name) const {
-	if (shader.is_valid()) {
-		const StringName *pr = remap_cache.getptr(p_name);
-		if (pr) {
-			Variant default_value = RenderingServer::get_singleton()->shader_get_parameter_default(shader->get_rid(), *pr);
-			Variant current_value = get_shader_parameter(*pr);
-			return default_value.get_type() != Variant::NIL && default_value != current_value;
-		}
-	}
-	return false;
+	return shader.is_valid() && remap_cache.has(p_name);
 }
 
 bool ShaderMaterial::_property_get_revert(const StringName &p_name, Variant &r_property) const {
