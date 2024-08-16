@@ -32,87 +32,98 @@
 #define TEST_PARALLAX_2D_H
 
 #include "scene/2d/parallax_2d.h"
-
 #include "tests/test_macros.h"
 
 namespace TestParallax2D {
 
+// Test cases for the Parallax2D class to ensure its properties are set and retrieved correctly.
+
 TEST_CASE("[SceneTree][Parallax2D] Test Scroll Scale") {
-	MESSAGE("Scale test");
-	Parallax2D parallax;
-	Size2 scale(2, 2);
-	parallax.set_scroll_scale(scale);
-	CHECK(parallax.get_scroll_scale() == scale);
+    // Test setting and getting the scroll scale.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Size2 scale(2, 2);
+    parallax->set_scroll_scale(scale);
+    CHECK(parallax->get_scroll_scale() == scale);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Repeat Size") {
-	MESSAGE("Size test");
-	Parallax2D parallax;
-	Size2 size(100, 100);
-	parallax.set_repeat_size(size);
-	CHECK(parallax.get_repeat_size() == size);
+    // Test setting and getting the repeat size.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Size2 size(100, 100);
+    parallax->set_repeat_size(size);
+    CHECK(parallax->get_repeat_size() == size);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Repeat Times") {
-	MESSAGE("Times test");
-	Parallax2D parallax;
-	int times = 5;
-	parallax.set_repeat_times(times);
-	CHECK(parallax.get_repeat_times() == times);
+    // Test setting and getting the repeat times.
+    Parallax2D *parallax = memnew(Parallax2D);
+    int times = 5;
+    parallax->set_repeat_times(times);
+    CHECK(parallax->get_repeat_times() == times);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Autoscroll") {
-	MESSAGE("Autoscroll test");
-	Parallax2D parallax;
-	Point2 autoscroll(1, 1);
-	parallax.set_autoscroll(autoscroll);
-	CHECK(parallax.get_autoscroll() == autoscroll);
+    // Test setting and getting the autoscroll values.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Point2 autoscroll(1, 1);
+    parallax->set_autoscroll(autoscroll);
+    CHECK(parallax->get_autoscroll() == autoscroll);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Scroll Offset") {
-	MESSAGE("Offset test");
-	Parallax2D parallax;
-	Point2 offset(10, 10);
-	parallax.set_scroll_offset(offset);
-	CHECK(parallax.get_scroll_offset() == offset);
+    // Test setting and getting the scroll offset.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Point2 offset(10, 10);
+    parallax->set_scroll_offset(offset);
+    CHECK(parallax->get_scroll_offset() == offset);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Screen Offset") {
-	MESSAGE("Screen offset test");
-	Parallax2D parallax;
-	Point2 offset(20, 20);
-	parallax.set_screen_offset(offset);
-	CHECK(parallax.get_screen_offset() == offset);
+    // Test setting and getting the screen offset.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Point2 offset(20, 20);
+    parallax->set_screen_offset(offset);
+    CHECK(parallax->get_screen_offset() == offset);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Limit Begin") {
-	MESSAGE("Limit begin test");
-	Parallax2D parallax;
-	Point2 limit_begin(-100, -100);
-	parallax.set_limit_begin(limit_begin);
-	CHECK(parallax.get_limit_begin() == limit_begin);
+    // Test setting and getting the limit begin values.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Point2 limit_begin(-100, -100);
+    parallax->set_limit_begin(limit_begin);
+    CHECK(parallax->get_limit_begin() == limit_begin);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Limit End") {
-	MESSAGE("Limit end test");
-	Parallax2D parallax;
-	Point2 limit_end(100, 100);
-	parallax.set_limit_end(limit_end);
-	CHECK(parallax.get_limit_end() == limit_end);
+    // Test setting and getting the limit end values.
+    Parallax2D *parallax = memnew(Parallax2D);
+    Point2 limit_end(100, 100);
+    parallax->set_limit_end(limit_end);
+    CHECK(parallax->get_limit_end() == limit_end);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Follow Viewport") {
-	MESSAGE("Follow viewport test");
-	Parallax2D parallax;
-	parallax.set_follow_viewport(false);
-	CHECK(parallax.get_follow_viewport() == false);
+    // Test setting and getting the follow viewport flag.
+    Parallax2D *parallax = memnew(Parallax2D);
+    parallax->set_follow_viewport(false);
+    CHECK(parallax->get_follow_viewport() == false);
+    memdelete(parallax);
 }
 
 TEST_CASE("[SceneTree][Parallax2D] Test Ignore Camera Scroll") {
-	MESSAGE("Ignore camera scroll test");
-	Parallax2D parallax;
-	parallax.set_ignore_camera_scroll(true);
-	CHECK(parallax.is_ignore_camera_scroll() == true);
+    // Test setting and getting the ignore camera scroll flag.
+    Parallax2D *parallax = memnew(Parallax2D);
+    parallax->set_ignore_camera_scroll(true);
+    CHECK(parallax->is_ignore_camera_scroll() == true);
+    memdelete(parallax);
 }
 
 } // namespace TestParallax2D
