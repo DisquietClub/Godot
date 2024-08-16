@@ -1120,6 +1120,8 @@ fail:
 
 void EditorSettings::setup_language() {
 	String lang = get("interface/editor/editor_language");
+	TranslationServer::get_singleton()->set_locale(lang);
+
 	if (lang == "en") {
 		return; // Default, nothing to do.
 	}
