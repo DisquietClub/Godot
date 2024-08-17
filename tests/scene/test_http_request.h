@@ -131,6 +131,161 @@ TEST_CASE("[Network][HTTPRequest][SceneTree] Request when disconnected") {
 	HTTPClientMock::reset_current();
 }
 
+TEST_CASE("[Network][HTTPRequest][SceneTree] Parse URL errors") {
+	HTTPClientMock::make_current();
+	HTTPRequest *http_request = memnew(HTTPRequest);
+	SceneTree::get_singleton()->get_root()->add_child(http_request);
+
+	SIGNAL_WATCH(http_request, "request_completed");
+
+	SUBCASE("URL is invalid") {
+		String url = "http://foo.com:8080:433";
+		ERR_PRINT_OFF;
+		Error error = http_request->request(url);
+		ERR_PRINT_ON;
+
+		CHECK(error == Error::ERR_INVALID_PARAMETER);
+		SIGNAL_CHECK_FALSE("request_completed");
+	}
+
+	SUBCASE("URL schema is invalid") {
+		String url = "ftp://foo.com";
+		ERR_PRINT_OFF;
+		Error error = http_request->request(url);
+		ERR_PRINT_ON;
+
+		CHECK(error == Error::ERR_INVALID_PARAMETER);
+		SIGNAL_CHECK_FALSE("request_completed");
+	}
+
+	SIGNAL_UNWATCH(http_request, "request_completed");
+	memdelete(http_request);
+	HTTPClientMock::reset_current();
+}
+
+TEST_CASE("[Network][HTTPRequest][SceneTree] Port") {
+	HTTPClientMock::make_current();
+
+	SUBCASE("URLs are parse to get the port") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+		HTTPClientMock *http_client = HTTPClientMock::current_instance;
+		int port = 8080;
+		String host = "foo.com";
+		String url = "http://" + host + ":" + itos(port);
+
+		Error error = http_request->request(url);
+
+		Verify(http_client->connect_to_host).With(host, port, (Ref<TLSOptions>)(nullptr)).Times(1);
+		CHECK(http_request->is_processing_internal());
+		CHECK(error == Error::OK);
+
+		memdelete(http_request);
+	}
+
+	SUBCASE("HTTP URLs default port") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+		HTTPClientMock *http_client = HTTPClientMock::current_instance;
+		String host = "foo.com";
+		String url = "http://" + host;
+
+		Error error = http_request->request(url);
+
+		Verify(http_client->connect_to_host).With(host, 80, (Ref<TLSOptions>)(nullptr)).Times(1);
+		CHECK(http_request->is_processing_internal());
+		CHECK(error == Error::OK);
+
+		memdelete(http_request);
+	}
+
+	SUBCASE("HTTPS URLs default port") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+		HTTPClientMock *http_client = HTTPClientMock::current_instance;
+		Ref<TLSOptions> tls_options = TLSOptions::client();
+		String host = "foo.com";
+		String url = "https://" + host;
+
+		http_request->set_tls_options(tls_options);
+		Error error = http_request->request(url);
+
+		Verify(http_client->connect_to_host).With(host, 443, tls_options).Times(1);
+		CHECK(http_request->is_processing_internal());
+		CHECK(error == Error::OK);
+
+		memdelete(http_request);
+	}
+
+	HTTPClientMock::reset_current();
+}
+
+TEST_CASE("[Network][HTTPRequest][SceneTree] Requests") {
+	HTTPClientMock::make_current();
+	String url = "http://foo.com";
+
+	SUBCASE("Just one at the same time") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+
+		Error error = http_request->request(url);
+		CHECK(error == Error::OK);
+
+		ERR_PRINT_OFF;
+		error = http_request->request(url);
+		ERR_PRINT_ON;
+		CHECK(error == Error::ERR_BUSY);
+
+		memdelete(http_request);
+	}
+
+	SUBCASE("Can be cancelled") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		HTTPClientMock *http_client = HTTPClientMock::current_instance;
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+
+		Error error = http_request->request(url);
+		CHECK(error == Error::OK);
+
+		http_request->cancel_request();
+		CHECK_FALSE(http_request->is_processing_internal());
+
+		error = http_request->request(url);
+		CHECK(error == Error::OK);
+		Verify(http_client->close).Times(1);
+
+		memdelete(http_request);
+	}
+
+	SUBCASE("Are cancelled when HTTPRequest node is removed from SceneTree") {
+		HTTPRequest *http_request = memnew(HTTPRequest);
+		HTTPClientMock *http_client = HTTPClientMock::current_instance;
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+
+		Error error = http_request->request(url);
+		CHECK(error == Error::OK);
+
+		ERR_PRINT_OFF;
+		error = http_request->request(url);
+		ERR_PRINT_ON;
+		CHECK(error == Error::ERR_BUSY);
+
+		// This will cancel the request
+		SceneTree::get_singleton()->get_root()->remove_child(http_request);
+		CHECK_FALSE(http_request->is_processing_internal());
+
+		// This is needed to create a new request
+		SceneTree::get_singleton()->get_root()->add_child(http_request);
+		error = http_request->request(url);
+		CHECK(error == Error::OK);
+		Verify(http_client->close).Times(1);
+
+		memdelete(http_request);
+	}
+
+	HTTPClientMock::reset_current();
+}
+
 TEST_CASE("[Network][HTTPRequest][SceneTree] GET Request") {
 	HTTPClientMock::make_current();
 	HTTPRequest *http_request = memnew(HTTPRequest);
