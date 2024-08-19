@@ -29,6 +29,10 @@
 /**************************************************************************/
 
 #include "tests/core/io/test_http_client_mock.h"
+#include "tests/core/io/test_http_client_manual_mock.h"
 
 HTTPClient *(*HTTPClientMock::_old_create)() = nullptr;
 HTTPClientMock *HTTPClientMock::current_instance = nullptr;
+
+HTTPClient *(*HTTPClientManualMock::_old_create)() = nullptr;
+HTTPClientManualMock *HTTPClientManualMock::current_instance = nullptr;
