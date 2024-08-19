@@ -34,11 +34,14 @@
 #include "core/core_constants.h"
 #include "core/extension/gdextension.h"
 #include "core/input/input.h"
+#include "core/io/dir_access.h"
 #include "core/object/script_language.h"
 #include "core/os/keyboard.h"
+#include "core/os/time.h"
 #include "core/string/string_builder.h"
 #include "core/version_generated.gen.h"
 #include "editor/doc_data_compressed.gen.h"
+#include "editor/editor_file_system.h"
 #include "editor/editor_node.h"
 #include "editor/editor_paths.h"
 #include "editor/editor_property_name_processor.h"
@@ -111,8 +114,6 @@ const Vector<String> packed_array_types = {
 	"PackedVector4Array",
 };
 
-// TODO: this is sometimes used directly as doc->something, other times as EditorHelp::get_doc_data(), which is thread-safe.
-// Might this be a problem?
 DocTools *EditorHelp::doc = nullptr;
 DocTools *EditorHelp::ext_doc = nullptr;
 
@@ -130,7 +131,7 @@ static bool _attempt_doc_load(const String &p_class) {
 		Vector<DocData::ClassDoc> docs = script->get_documentation();
 		for (int j = 0; j < docs.size(); j++) {
 			const DocData::ClassDoc &doc = docs.get(j);
-			EditorHelp::get_doc_data()->add_doc(doc);
+			EditorHelp::add_doc(doc);
 		}
 		return true;
 	}
@@ -2842,6 +2843,7 @@ void EditorHelp::_add_text(const String &p_bbcode) {
 
 int EditorHelp::doc_generation_count = 0;
 String EditorHelp::doc_version_hash;
+bool EditorHelp::script_docs_loaded = false;
 Thread EditorHelp::worker_thread;
 
 void EditorHelp::_wait_for_thread() {
@@ -2857,6 +2859,35 @@ void EditorHelp::_compute_doc_version_hash() {
 
 String EditorHelp::get_cache_full_path() {
 	return EditorPaths::get_singleton()->get_cache_dir().path_join(vformat("editor_doc_cache-%d.%d.res", VERSION_MAJOR, VERSION_MINOR));
+}
+
+String EditorHelp::get_script_doc_cache_full_path() {
+	return EditorPaths::get_singleton()->get_project_settings_dir().path_join("editor_script_doc_cache.res");
+}
+
+void EditorHelp::add_doc(const DocData::ClassDoc &p_class_doc) {
+	get_doc_data()->add_doc(p_class_doc);
+	if (p_class_doc.is_script_doc) {
+		_delete_script_cache();
+	}
+}
+
+void EditorHelp::remove_doc(const String &p_class_name) {
+	DocTools *dt = get_doc_data();
+	if (dt->has_doc(p_class_name) && dt->class_list[p_class_name].is_script_doc) {
+		_delete_script_cache();
+	}
+	dt->remove_doc(p_class_name);
+}
+
+void EditorHelp::remove_script_doc_by_path(const String &p_path) {
+	if (get_doc_data()->remove_script_doc_by_path(p_path)) {
+		_delete_script_cache();
+	}
+}
+
+bool EditorHelp::has_doc(const String &p_class_name) {
+	return get_doc_data()->has_doc(p_class_name);
 }
 
 void EditorHelp::load_xml_buffer(const uint8_t *p_buffer, int p_size) {
@@ -2877,11 +2908,12 @@ void EditorHelp::remove_class(const String &p_class) {
 	}
 
 	if (doc && doc->has_doc(p_class)) {
-		doc->remove_doc(p_class);
+		remove_doc(p_class);
 	}
 }
 
 void EditorHelp::_load_doc_thread(void *p_udata) {
+	bool use_script_cache = (bool)p_udata;
 	Ref<Resource> cache_res = ResourceLoader::load(get_cache_full_path());
 	if (cache_res.is_valid() && cache_res->get_meta("version_hash", "") == doc_version_hash) {
 		Array classes = cache_res->get_meta("classes", Array());
@@ -2889,11 +2921,14 @@ void EditorHelp::_load_doc_thread(void *p_udata) {
 			doc->add_doc(DocData::ClassDoc::from_dict(classes[i]));
 		}
 
+		if (use_script_cache && ProjectSettings::get_singleton()->is_project_loaded()) {
+			_load_script_doc_cache();
+		}
 		// Extensions' docs are not cached. Generate them now (on the main thread).
 		callable_mp_static(&EditorHelp::_gen_extensions_docs).call_deferred();
 	} else {
 		// We have to go back to the main thread to start from scratch, bypassing any possibly existing cache.
-		callable_mp_static(&EditorHelp::generate_doc).call_deferred(false);
+		callable_mp_static(&EditorHelp::generate_doc).call_deferred(false, use_script_cache);
 	}
 
 	OS::get_singleton()->benchmark_end_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
@@ -2923,6 +2958,12 @@ void EditorHelp::_gen_doc_thread(void *p_udata) {
 		ERR_PRINT("Cannot save editor help cache (" + get_cache_full_path() + ").");
 	}
 
+	// Load script docs after native ones are cached so native cache doesn't contain script docs.
+	bool use_script_cache = (bool)p_udata;
+	if (use_script_cache && ProjectSettings::get_singleton()->is_project_loaded()) {
+		_load_script_doc_cache();
+	}
+
 	OS::get_singleton()->benchmark_end_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
 }
 
@@ -2935,7 +2976,95 @@ void EditorHelp::_gen_extensions_docs() {
 	}
 }
 
-void EditorHelp::generate_doc(bool p_use_cache) {
+void EditorHelp::_load_script_doc_cache() {
+	ERR_FAIL_COND_MSG(!ProjectSettings::get_singleton()->is_project_loaded(), "Error: cannot load script doc cache without a project.");
+	if (!ResourceLoader::exists(get_script_doc_cache_full_path())) {
+		print_verbose("Script documentation cache not found. Regenerating it may take a while.");
+		callable_mp_static(regenerate_script_doc_cache).call_deferred(); // Don't call from worker_thread!
+		return;
+	}
+
+	Ref<Resource> script_doc_cache_res = ResourceLoader::load(get_script_doc_cache_full_path());
+	if (script_doc_cache_res.is_valid()) {
+		Array classes = script_doc_cache_res->get_meta("classes", Array());
+		for (const Variant &dict : classes) {
+			doc->add_doc(DocData::ClassDoc::from_dict(dict));
+		}
+	}
+	script_docs_loaded = true;
+}
+
+void EditorHelp::regenerate_script_doc_cache() {
+	if (EditorFileSystem::get_singleton()->is_scanning()) {
+		// Close worker thread while waiting on the filesystem scan which can try to wait on worker_thread.
+		// This signal on Editor startup and gives us EditorFileSystem's datastructures instead of OS filesystem calls.
+		EditorFileSystem::get_singleton()->connect("filesystem_changed", callable_mp_static(EditorHelp::regenerate_script_doc_cache), CONNECT_ONE_SHOT);
+		return;
+	}
+
+	EditorHelp::_wait_for_thread();
+	worker_thread.start(_gen_script_doc_thread, EditorFileSystem::get_singleton()->get_filesystem());
+}
+
+// Local function to avoid adding editor_file_system.h dependency to editor_help.h
+static void _reload_scripts_documentation(EditorFileSystemDirectory *dir, DocTools *doc) {
+	// Recursively force compile all scripts, which should generate their documentation.
+	for (int i = 0; i < dir->get_subdir_count(); i++) {
+		_reload_scripts_documentation(dir->get_subdir(i), doc);
+	}
+
+	for (int i = 0; i < dir->get_file_count(); i++) {
+		if (ClassDB::is_parent_class(dir->get_file_type(i), SNAME("Script"))) {
+			Ref<Script> scr = ResourceLoader::load(dir->get_file_path(i));
+			if (scr.is_valid()) {
+				for (const DocData::ClassDoc &cd : scr->get_documentation()) {
+					doc->add_doc(cd);
+				}
+			}
+		}
+	}
+}
+
+void EditorHelp::_gen_script_doc_thread(void *p_udata) {
+	OS::get_singleton()->benchmark_begin_measure("EditorHelp", "Generate Script Documentation");
+
+	EditorFileSystemDirectory *dir = static_cast<EditorFileSystemDirectory *>(p_udata);
+	script_docs_loaded = false;
+	_reload_scripts_documentation(dir, doc);
+	script_docs_loaded = true;
+
+	OS::get_singleton()->benchmark_end_measure("EditorHelp", "Generate Script Documentation");
+}
+
+void EditorHelp::_delete_script_cache() {
+	if (FileAccess::exists(get_script_doc_cache_full_path()))
+		DirAccess::remove_file_or_error(ProjectSettings::get_singleton()->globalize_path(get_script_doc_cache_full_path()));
+}
+
+void EditorHelp::save_script_doc_cache() {
+	// Assume there are changes since we are saving cache. Make sure outdated cache does not exist on disk.
+	_delete_script_cache();
+
+	if (!script_docs_loaded) {
+		print_verbose("Script docs haven't been properly loaded or regenerated, so don't save them to disk.");
+		return;
+	}
+
+	Ref<Resource> cache_res;
+	cache_res.instantiate();
+	Array classes;
+	for (const KeyValue<String, DocData::ClassDoc> &E : doc->class_list) {
+		if (E.value.is_script_doc) {
+			classes.push_back(DocData::ClassDoc::to_dict(E.value));
+		}
+	}
+
+	cache_res->set_meta("classes", classes);
+	Error err = ResourceSaver::save(cache_res, get_script_doc_cache_full_path(), ResourceSaver::FLAG_COMPRESS);
+	ERR_FAIL_COND_MSG(err != OK, vformat("Cannot save script documentation cache in %s.", get_script_doc_cache_full_path()));
+}
+
+void EditorHelp::generate_doc(bool p_use_cache, bool p_use_script_cache) {
 	doc_generation_count++;
 	OS::get_singleton()->benchmark_begin_measure("EditorHelp", vformat("Generate Documentation (Run %d)", doc_generation_count));
 
@@ -2951,11 +3080,11 @@ void EditorHelp::generate_doc(bool p_use_cache) {
 	}
 
 	if (p_use_cache && FileAccess::exists(get_cache_full_path())) {
-		worker_thread.start(_load_doc_thread, nullptr);
+		worker_thread.start(_load_doc_thread, (void *)p_use_script_cache);
 	} else {
 		print_verbose("Regenerating editor help cache");
 		doc->generate();
-		worker_thread.start(_gen_doc_thread, nullptr);
+		worker_thread.start(_gen_doc_thread, (void *)p_use_script_cache);
 	}
 }
 

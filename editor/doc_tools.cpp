@@ -309,12 +309,16 @@ static void merge_operators(Vector<DocData::MethodDoc> &p_to, const Vector<DocDa
 	}
 }
 
-void DocTools::merge_from(const DocTools &p_data) {
+void DocTools::merge_from(const DocTools &p_data, bool *r_merged_script_doc) {
 	for (KeyValue<String, DocData::ClassDoc> &E : class_list) {
 		DocData::ClassDoc &c = E.value;
 
 		if (!p_data.class_list.has(c.name)) {
 			continue;
+		}
+
+		if (E.value.is_script_doc && r_merged_script_doc) {
+			*r_merged_script_doc = true;
 		}
 
 		const DocData::ClassDoc &cf = p_data.class_list[c.name];
@@ -363,6 +367,16 @@ void DocTools::remove_doc(const String &p_class_name) {
 		}
 	}
 	class_list.erase(p_class_name);
+}
+
+bool DocTools::remove_script_doc_by_path(const String &p_path) {
+	for (KeyValue<String, DocData::ClassDoc> &E : class_list) {
+		if (E.value.is_script_doc && E.value.script_path == p_path) {
+			remove_doc(E.key);
+			return true;
+		}
+	}
+	return false;
 }
 
 bool DocTools::has_doc(const String &p_class_name) {
