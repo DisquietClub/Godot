@@ -4,13 +4,14 @@
 		Imports a WAV audio file for playback.
 	</brief_description>
 	<description>
-		WAV is an uncompressed format, which can provide higher quality compared to Ogg Vorbis and MP3. It also has the lowest CPU cost to decode. This means high numbers of WAV sounds can be played at the same time, even on low-end deviceS.
+		WAV is an uncompressed format, which can provide higher quality compared to Ogg Vorbis and MP3. It also has the lowest CPU cost to decode. This means high numbers of WAV sounds can be played at the same time, even on low-end devices.
+		By default, Godot imports WAV files using the lossy QOA compression. You may change this by setting the [member compress/mode] property.
 	</description>
 	<tutorials>
 		<link title="Importing audio samples">$DOCS_URL/tutorials/assets_pipeline/importing_audio_samples.html</link>
 	</tutorials>
 	<members>
-		<member name="compress/mode" type="int" setter="" getter="" default="0">
+		<member name="compress/mode" type="int" setter="" getter="" default="2">
 			The compression mode to use on import.
 			[b]Disabled:[/b] Imports audio data without any compression. This results in the highest possible quality.
 			[b]RAM (Ima-ADPCM):[/b] Performs fast lossy compression on import. Low CPU cost, but quality is noticeably decreased compared to Ogg Vorbis or even MP3.
