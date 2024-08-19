@@ -42,7 +42,7 @@
 			<return type="bool" />
 			<param index="0" name="point" type="Vector2" />
 			<description>
-				Returns true if [param point] falls inside the polygon area, returns false otherwise. 
+				Returns [code]true[/code] if [param point] falls inside the polygon area, returns [code]false[/code] otherwise. 
 				[codeblocks]
 				[gdscript]
 				var polygon_pathfinder = PolygonPathFinder.new()
