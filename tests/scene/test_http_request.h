@@ -415,23 +415,22 @@ TEST_CASE("[Network][HTTPRequest][SceneTree] POST Request with body and headers"
 
 #ifdef THREADS_ENABLED
 
-TEST_CASE("[Network][HTTPRequest][SceneTree][Threads] GET Request") {
-	WARN_PRINT("[Network][HTTPRequest][SceneTree][Threads] GET Request");
+TEST_CASE("[Network][HTTPRequest][SceneTree][Threads] GET Request with body") {
 	HTTPClientMock::make_current();
 	HTTPRequest *http_request = memnew(HTTPRequest);
 	SceneTree::get_singleton()->get_root()->add_child(http_request);
 	HTTPClientMock *http_client = HTTPClientMock::current_instance;
+	PackedByteArray body = String("Godot Rules!!!").to_utf8_buffer();
 	Semaphore s;
 
 	// HTTPClient::STATUS_DISCONNECTED is needed by HTTPRequest::set_use_threads
-	When(http_client->get_status).Return({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING,
-			// First STATUS_CONNECTED is to send the request, second STATUS_CONNECTED is to receive request
-			HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_CONNECTED });
+	When(http_client->get_status).Return({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING, HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_BODY });
 	When(http_client->get_response_code).Return(HTTPClient::ResponseCode::RESPONSE_OK);
 	When(http_client->has_response).Return(true);
-	When(http_client->request).With(HTTPClient::Method::METHOD_GET, String("/"), build_headers("Accept-Encoding: gzip, deflate"), (uint8_t *)nullptr, 0).Do([&s](HTTPClient::Method, const String &, const Vector<String> &, const uint8_t *, int) -> Error {
+	When(http_client->get_response_body_length).Return(body.size());
+	When(http_client->read_response_body_chunk).Do([&s, body]() -> PackedByteArray {
 		s.post();
-		return Error::OK;
+		return body;
 	});
 	SIGNAL_WATCH(http_request, "request_completed");
 
@@ -446,7 +445,7 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads] GET Request") {
 	SceneTree::get_singleton()->process(0);
 
 	Verify(http_client->request).With(HTTPClient::Method::METHOD_GET, String("/"), build_headers("Accept-Encoding: gzip, deflate"), (uint8_t *)nullptr, 0).Times(1);
-	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_SUCCESS, HTTPClient::ResponseCode::RESPONSE_OK, PackedStringArray(), PackedByteArray())));
+	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_SUCCESS, HTTPClient::ResponseCode::RESPONSE_OK, PackedStringArray(), body)));
 	CHECK_FALSE(http_request->is_processing_internal());
 	CHECK(error == Error::OK);
 

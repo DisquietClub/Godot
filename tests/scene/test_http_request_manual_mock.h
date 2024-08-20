@@ -374,21 +374,22 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] POST Request with body 
 
 #ifdef THREADS_ENABLED
 
-TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") {
-	WARN_PRINT("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request");
+TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request with body") {
 	HTTPClientManualMock::make_current();
 	HTTPRequest *http_request = memnew(HTTPRequest);
 	SceneTree::get_singleton()->get_root()->add_child(http_request);
 	HTTPClientManualMock *http_client = HTTPClientManualMock::current_instance;
+	PackedByteArray body = String("Godot Rules!!!").to_utf8_buffer();
 	Semaphore *semaphore = new Semaphore();
 
 	// HTTPClient::STATUS_DISCONNECTED is needed by HTTPRequest::set_use_threads
-	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING,
-			// First STATUS_CONNECTED is to send the request, second STATUS_CONNECTED is to receive request
-			HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_CONNECTED });
+	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING, HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_BODY, HTTPClient::STATUS_BODY });
 	http_client->get_response_code_return = HTTPClient::ResponseCode::RESPONSE_OK;
 	http_client->has_response_return = true;
-	http_client->request_semaphore = semaphore;
+	http_client->get_response_headers_return = Error::OK;
+	http_client->get_response_body_length_return = body.size();
+	http_client->read_response_body_chunk_return = body;
+	http_client->read_response_body_chunk_semaphore = semaphore;
 	SIGNAL_WATCH(http_request, "request_completed");
 
 	http_request->set_use_threads(true);
@@ -407,12 +408,12 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") 
 	CHECK_EQ((uint8_t *)nullptr, http_client->request_p_body_parameter);
 	CHECK_EQ(0, http_client->request_p_body_size_parameter);
 	CHECK_EQ(http_client->request_call_count, 1);
-	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_SUCCESS, HTTPClient::ResponseCode::RESPONSE_OK, PackedStringArray(), PackedByteArray())));
+	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_SUCCESS, HTTPClient::ResponseCode::RESPONSE_OK, PackedStringArray(), body)));
 	CHECK_FALSE(http_request->is_processing_internal());
 	CHECK(error == Error::OK);
 
 	SIGNAL_UNWATCH(http_request, "request_completed");
-	http_client->request_semaphore = nullptr;
+	http_client->read_response_body_chunk_semaphore = nullptr;
 	delete semaphore;
 	memdelete(http_request);
 	HTTPClientManualMock::reset_current();

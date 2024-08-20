@@ -86,12 +86,11 @@ public:
 	int64_t get_response_body_length_return;
 
 	PackedByteArray read_response_body_chunk_return;
+#ifdef THREADS_ENABLED
+	Semaphore *read_response_body_chunk_semaphore = nullptr;
+#endif // THREADS_ENABLED
 
 	Error poll_return;
-
-#ifdef THREADS_ENABLED
-	Semaphore *request_semaphore = nullptr;
-#endif // THREADS_ENABLED
 
 	Error request(Method p_method, const String &p_url, const Vector<String> &p_headers, const uint8_t *p_body, int p_body_size) override {
 		request_p_method_parameter = p_method;
@@ -100,11 +99,6 @@ public:
 		request_p_body_parameter = const_cast<uint8_t *>(p_body);
 		request_p_body_size_parameter = p_body_size;
 		request_call_count++;
-#ifdef THREADS_ENABLED
-		if (request_semaphore != nullptr) {
-			request_semaphore->post();
-		}
-#endif // THREADS_ENABLED
 		return request_return;
 	}
 	Error connect_to_host(const String &p_host, int p_port = -1, Ref<TLSOptions> p_tls_options = Ref<TLSOptions>()) override {
@@ -148,6 +142,11 @@ public:
 	}
 
 	PackedByteArray read_response_body_chunk() override {
+#ifdef THREADS_ENABLED
+		if (read_response_body_chunk_semaphore != nullptr) {
+			read_response_body_chunk_semaphore->post();
+		}
+#endif // THREADS_ENABLED
 		return read_response_body_chunk_return;
 	}
 
