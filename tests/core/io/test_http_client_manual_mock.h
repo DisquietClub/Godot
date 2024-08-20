@@ -83,14 +83,14 @@ public:
 	List<String> get_response_headers_r_response_parameter;
 	Error get_response_headers_return = Error::OK;
 
-	int64_t get_response_body_length_return = 0;
+	int64_t get_response_body_length_return;
 
 	PackedByteArray read_response_body_chunk_return;
 
-	Error poll_return = Error::OK;
+	Error poll_return;
 
 #ifdef THREADS_ENABLED
-	Semaphore *request_semaphore = nullptr;
+	Semaphore *request_semaphore;
 #endif // THREADS_ENABLED
 
 	Error request(Method p_method, const String &p_url, const Vector<String> &p_headers, const uint8_t *p_body, int p_body_size) override {
@@ -168,7 +168,7 @@ public:
 
 private:
 	// This MUST be mutable because I need to update its value from a const method (the mock method)
-	mutable Vector<Status>::Size get_status_return_current;
+	mutable Vector<Status>::Size get_status_return_current = 0;
 };
 
 #endif // TEST_HTTP_CLIENT_MANUAL_MOCK_H
