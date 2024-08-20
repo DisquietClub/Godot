@@ -90,7 +90,7 @@ public:
 	Error poll_return;
 
 #ifdef THREADS_ENABLED
-	Semaphore *request_semaphore;
+	Semaphore *request_semaphore = nullptr;
 #endif // THREADS_ENABLED
 
 	Error request(Method p_method, const String &p_url, const Vector<String> &p_headers, const uint8_t *p_body, int p_body_size) override {

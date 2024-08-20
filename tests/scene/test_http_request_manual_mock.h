@@ -379,7 +379,7 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") 
 	HTTPRequest *http_request = memnew(HTTPRequest);
 	SceneTree::get_singleton()->get_root()->add_child(http_request);
 	HTTPClientManualMock *http_client = HTTPClientManualMock::current_instance;
-	Semaphore s;
+	Semaphore *semaphore = new Semaphore();
 
 	// HTTPClient::STATUS_DISCONNECTED is needed by HTTPRequest::set_use_threads
 	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING,
@@ -387,7 +387,7 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") 
 			HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_CONNECTED });
 	http_client->get_response_code_return = HTTPClient::ResponseCode::RESPONSE_OK;
 	http_client->has_response_return = true;
-	http_client->request_semaphore = &s;
+	http_client->request_semaphore = semaphore;
 	SIGNAL_WATCH(http_request, "request_completed");
 
 	http_request->set_use_threads(true);
@@ -395,7 +395,7 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") 
 	Error error = http_request->request(url);
 
 	// Let the thread do its job
-	s.wait();
+	semaphore->wait();
 
 	// This is needed to get defer calls processed
 	SceneTree::get_singleton()->process(0);
@@ -411,6 +411,8 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") 
 	CHECK(error == Error::OK);
 
 	SIGNAL_UNWATCH(http_request, "request_completed");
+	http_client->request_semaphore = nullptr;
+	delete semaphore;
 	memdelete(http_request);
 	HTTPClientManualMock::reset_current();
 }
