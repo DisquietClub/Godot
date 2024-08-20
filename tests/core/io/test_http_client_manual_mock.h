@@ -57,40 +57,40 @@ public:
 
 	Vector<Status> get_status_return;
 
-	int set_read_chunk_size_p_size_parameter;
-	int set_read_chunk_size_call_count;
+	int set_read_chunk_size_p_size_parameter = 0;
+	int set_read_chunk_size_call_count = 0;
 
 	String connect_to_host_p_host_parameter;
-	int connect_to_host_p_port_parameter;
-	Ref<TLSOptions> connect_to_host_p_tls_options_parameter;
-	Error connect_to_host_return;
-	int connect_to_host_call_count;
+	int connect_to_host_p_port_parameter = 0;
+	Ref<TLSOptions> connect_to_host_p_tls_options_parameter = nullptr;
+	Error connect_to_host_return = Error::OK;
+	int connect_to_host_call_count = 0;
 
-	int close_call_count;
+	int close_call_count = 0;
 
-	int get_response_code_return;
+	int get_response_code_return = 0;
 
-	bool has_response_return;
+	bool has_response_return = false;
 
-	Method request_p_method_parameter;
+	Method request_p_method_parameter = Method::METHOD_GET;
 	String request_p_url_parameter;
 	Vector<String> request_p_headers_parameter;
-	uint8_t *request_p_body_parameter;
-	int request_p_body_size_parameter;
-	int request_call_count;
-	Error request_return;
+	uint8_t *request_p_body_parameter = nullptr;
+	int request_p_body_size_parameter = 0;
+	int request_call_count = 0;
+	Error request_return = Error::OK;
 
 	List<String> get_response_headers_r_response_parameter;
-	Error get_response_headers_return;
+	Error get_response_headers_return = Error::OK;
 
-	int64_t get_response_body_length_return;
+	int64_t get_response_body_length_return = 0;
 
 	PackedByteArray read_response_body_chunk_return;
 
-	Error poll_return;
+	Error poll_return = Error::OK;
 
 #ifdef THREADS_ENABLED
-	Semaphore *request_semaphore;
+	Semaphore *request_semaphore = nullptr;
 #endif // THREADS_ENABLED
 
 	Error request(Method p_method, const String &p_url, const Vector<String> &p_headers, const uint8_t *p_body, int p_body_size) override {
