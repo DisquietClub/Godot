@@ -165,6 +165,7 @@ void HTTPRequest::_thread_func(void *p_userdata) {
 	HTTPRequest *hr = static_cast<HTTPRequest *>(p_userdata);
 
 	Error err = hr->_request();
+	WARN_PRINT("After _request(). err = " + itos(err));
 
 	if (err != OK) {
 		hr->_defer_done(RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray());
@@ -294,6 +295,7 @@ bool HTTPRequest::_update_connection() {
 			return true; // End it, since it's disconnected.
 		} break;
 		case HTTPClient::STATUS_RESOLVING: {
+			WARN_PRINT("In HTTPClient::STATUS_RESOLVING");
 			client->poll();
 			// Must wait.
 			return false;
@@ -304,6 +306,7 @@ bool HTTPRequest::_update_connection() {
 
 		} break;
 		case HTTPClient::STATUS_CONNECTING: {
+			WARN_PRINT("In HTTPClient::STATUS_RESOLVING");
 			client->poll();
 			// Must wait.
 			return false;
@@ -314,16 +317,19 @@ bool HTTPRequest::_update_connection() {
 
 		} break;
 		case HTTPClient::STATUS_CONNECTED: {
+			WARN_PRINT("In HTTPClient::STATUS_CONNECTED");
 			if (request_sent) {
 				if (!got_response) {
 					// No body.
 
 					bool ret_value;
 
+					WARN_PRINT("Before _handle_response()");
 					if (_handle_response(&ret_value)) {
 						return ret_value;
 					}
 
+					WARN_PRINT("Before _defer_done()");
 					_defer_done(RESULT_SUCCESS, response_code, response_headers, PackedByteArray());
 					return true;
 				}
@@ -340,7 +346,9 @@ bool HTTPRequest::_update_connection() {
 				// Did not request yet, do request.
 
 				int size = request_data.size();
+				WARN_PRINT("Before client->request()");
 				Error err = client->request(method, request_string, headers, size > 0 ? request_data.ptr() : nullptr, size);
+				WARN_PRINT("After client->request(). err = " + itos(err));
 				if (err != OK) {
 					_defer_done(RESULT_CONNECTION_ERROR, 0, PackedStringArray(), PackedByteArray());
 					return true;
@@ -474,12 +482,15 @@ bool HTTPRequest::_update_connection() {
 }
 
 void HTTPRequest::_defer_done(int p_status, int p_code, const PackedStringArray &p_headers, const PackedByteArray &p_data) {
+	WARN_PRINT("In _defer_done()");
 	callable_mp(this, &HTTPRequest::_request_done).call_deferred(p_status, p_code, p_headers, p_data);
 }
 
 void HTTPRequest::_request_done(int p_status, int p_code, const PackedStringArray &p_headers, const PackedByteArray &p_data) {
+	WARN_PRINT("In _request_done()");
 	cancel_request();
 
+	WARN_PRINT("Before emit_signal()");
 	emit_signal(SNAME("request_completed"), p_status, p_code, p_headers, p_data);
 }
 

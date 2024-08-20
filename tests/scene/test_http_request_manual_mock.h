@@ -375,6 +375,7 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] POST Request with body 
 #ifdef THREADS_ENABLED
 
 TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") {
+	WARN_PRINT("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request");
 	HTTPClientManualMock::make_current();
 	HTTPRequest *http_request = memnew(HTTPRequest);
 	SceneTree::get_singleton()->get_root()->add_child(http_request);
