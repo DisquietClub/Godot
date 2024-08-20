@@ -87,6 +87,12 @@ public:
 
 	PackedByteArray read_response_body_chunk_return;
 
+	Error poll_return;
+
+#ifdef THREADS_ENABLED
+	Semaphore *request_semaphore;
+#endif // THREADS_ENABLED
+
 	Error request(Method p_method, const String &p_url, const Vector<String> &p_headers, const uint8_t *p_body, int p_body_size) override {
 		request_p_method_parameter = p_method;
 		request_p_url_parameter = p_url;
@@ -94,6 +100,11 @@ public:
 		request_p_body_parameter = const_cast<uint8_t *>(p_body);
 		request_p_body_size_parameter = p_body_size;
 		request_call_count++;
+#ifdef THREADS_ENABLED
+		if (request_semaphore != nullptr) {
+			request_semaphore->post();
+		}
+#endif // THREADS_ENABLED
 		return request_return;
 	}
 	Error connect_to_host(const String &p_host, int p_port = -1, Ref<TLSOptions> p_tls_options = Ref<TLSOptions>()) override {
@@ -116,13 +127,11 @@ public:
 			FAIL("Call to HTTPClient::get_status not set. Please set a return value.");
 			return Status();
 		}
-		if (get_status_return_current >= get_status_return.size()) {
-			FAIL("Call to HTTPClient::get_status not set. More calls to this method than the mocked ones were made");
-			return Status();
-		}
 
 		Status status = get_status_return[get_status_return_current];
-		get_status_return_current++;
+		if (get_status_return_current + 1 < get_status_return.size()) {
+			get_status_return_current++;
+		}
 		return status;
 	}
 
@@ -151,7 +160,9 @@ public:
 	}
 	int get_read_chunk_size() const override { return 0; }
 
-	Error poll() override { return Error::OK; }
+	Error poll() override {
+		return poll_return;
+	}
 
 	HTTPClientManualMock() {}
 

@@ -231,6 +231,33 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] Requests") {
 	HTTPClientManualMock::reset_current();
 }
 
+TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] Timeout") {
+	HTTPClientManualMock::make_current();
+	HTTPRequest *http_request = memnew(HTTPRequest);
+	SceneTree::get_singleton()->get_root()->add_child(http_request);
+	HTTPClientManualMock *http_client = HTTPClientManualMock::current_instance;
+
+	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_RESOLVING });
+	http_client->poll_return = Error::OK;
+	SIGNAL_WATCH(http_request, "request_completed");
+
+	http_request->set_timeout(1);
+	String url = "http://foo.com";
+	Error error = http_request->request(url);
+
+	// Call process with time greater than timeout
+	SceneTree::get_singleton()->process(2);
+
+	CHECK_EQ(http_client->request_call_count, 0);
+	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_TIMEOUT, 0, PackedStringArray(), PackedByteArray())));
+	CHECK_FALSE(http_request->is_processing_internal());
+	CHECK(error == Error::OK);
+
+	SIGNAL_UNWATCH(http_request, "request_completed");
+	memdelete(http_request);
+	HTTPClientManualMock::reset_current();
+}
+
 TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] GET Request") {
 	HTTPClientManualMock::make_current();
 	HTTPRequest *http_request = memnew(HTTPRequest);
@@ -331,7 +358,6 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] POST Request with body 
 		SceneTree::get_singleton()->process(0);
 	}
 
-
 	CHECK_EQ(HTTPClient::Method::METHOD_POST, http_client->request_p_method_parameter);
 	CHECK_EQ(String("/"), http_client->request_p_url_parameter);
 	CHECK_EQ(build_headers("Accept-Encoding: gzip, deflate", "Accept: text/json"), http_client->request_p_headers_parameter);
@@ -345,6 +371,80 @@ TEST_CASE("[Network][HTTPRequest][SceneTree][ManualMock] POST Request with body 
 	memdelete(http_request);
 	HTTPClientManualMock::reset_current();
 }
+
+#ifdef THREADS_ENABLED
+
+TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] GET Request") {
+	HTTPClientManualMock::make_current();
+	HTTPRequest *http_request = memnew(HTTPRequest);
+	SceneTree::get_singleton()->get_root()->add_child(http_request);
+	HTTPClientManualMock *http_client = HTTPClientManualMock::current_instance;
+	Semaphore s;
+
+	// HTTPClient::STATUS_DISCONNECTED is needed by HTTPRequest::set_use_threads
+	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING, HTTPClient::STATUS_CONNECTING,
+			// First STATUS_CONNECTED is to send the request, second STATUS_CONNECTED is to receive request
+			HTTPClient::STATUS_CONNECTED, HTTPClient::STATUS_CONNECTED });
+	http_client->get_response_code_return = HTTPClient::ResponseCode::RESPONSE_OK;
+	http_client->has_response_return = true;
+	http_client->request_semaphore = &s;
+	SIGNAL_WATCH(http_request, "request_completed");
+
+	http_request->set_use_threads(true);
+	String url = "http://foo.com";
+	Error error = http_request->request(url);
+
+	// Let the thread do its job
+	s.wait();
+
+	// This is needed to get defer calls processed
+	SceneTree::get_singleton()->process(0);
+
+	CHECK_EQ(HTTPClient::Method::METHOD_GET, http_client->request_p_method_parameter);
+	CHECK_EQ(String("/"), http_client->request_p_url_parameter);
+	CHECK_EQ(build_headers("Accept-Encoding: gzip, deflate"), http_client->request_p_headers_parameter);
+	CHECK_EQ((uint8_t *)nullptr, http_client->request_p_body_parameter);
+	CHECK_EQ(0, http_client->request_p_body_size_parameter);
+	CHECK_EQ(http_client->request_call_count, 1);
+	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_SUCCESS, HTTPClient::ResponseCode::RESPONSE_OK, PackedStringArray(), PackedByteArray())));
+	CHECK_FALSE(http_request->is_processing_internal());
+	CHECK(error == Error::OK);
+
+	SIGNAL_UNWATCH(http_request, "request_completed");
+	memdelete(http_request);
+	HTTPClientManualMock::reset_current();
+}
+
+TEST_CASE("[Network][HTTPRequest][SceneTree][Threads][ManualMock] Timeout") {
+	HTTPClientManualMock::make_current();
+	HTTPRequest *http_request = memnew(HTTPRequest);
+	SceneTree::get_singleton()->get_root()->add_child(http_request);
+	HTTPClientManualMock *http_client = HTTPClientManualMock::current_instance;
+
+	// HTTPClient::STATUS_DISCONNECTED is needed by HTTPRequest::set_use_threads
+	http_client->get_status_return = Vector<HTTPClient::Status>({ HTTPClient::STATUS_DISCONNECTED, HTTPClient::STATUS_RESOLVING });
+	http_client->poll_return = Error::OK;
+	SIGNAL_WATCH(http_request, "request_completed");
+
+	http_request->set_use_threads(true);
+	http_request->set_timeout(1);
+	String url = "http://foo.com";
+	Error error = http_request->request(url);
+
+	// Call process with time greater than timeout
+	SceneTree::get_singleton()->process(2);
+
+	CHECK_EQ(http_client->request_call_count, 0);
+	SIGNAL_CHECK("request_completed", build_array(build_array(HTTPRequest::Result::RESULT_TIMEOUT, 0, PackedStringArray(), PackedByteArray())));
+	CHECK_FALSE(http_request->is_processing_internal());
+	CHECK(error == Error::OK);
+
+	SIGNAL_UNWATCH(http_request, "request_completed");
+	memdelete(http_request);
+	HTTPClientManualMock::reset_current();
+}
+
+#endif // THREADS_ENABLED
 
 } // namespace TestHTTPRequestManualMock
 
