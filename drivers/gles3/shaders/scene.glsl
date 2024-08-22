@@ -2365,8 +2365,9 @@ void main() {
 #ifdef MODE_UNSHADED
 	frag_color = vec4(albedo, alpha);
 #else
-
+#ifndef USE_VERTEX_LIGHTING
 	diffuse_light *= albedo;
+#endif
 
 	diffuse_light *= 1.0 - metallic;
 	ambient_light *= 1.0 - metallic;
@@ -2511,7 +2512,7 @@ void main() {
 #else
 	float directional_shadow = 1.0f;
 #endif // SHADOWS_DISABLED
-#if !defined(USE_VERTEX_LIGHTING)
+#ifndef USE_VERTEX_LIGHTING
 	light_compute(normal, normalize(directional_lights[directional_shadow_index].direction), normalize(view), directional_lights[directional_shadow_index].size, directional_lights[directional_shadow_index].color * directional_lights[directional_shadow_index].energy, true, directional_shadow, f0, roughness, metallic, 1.0, albedo, alpha,
 #ifdef LIGHT_BACKLIGHT_USED
 			backlight,
@@ -2531,7 +2532,7 @@ void main() {
 #else // Pass Vertex Lighting data to fragment colors with fragment shadows
 	specular_light += specular_light_interp.rgb * directional_shadow;
 	diffuse_light += diffuse_light_interp.rgb * directional_shadow;
-#endif // !defined(USE_VERTEX_LIGHTING)
+#endif // !USE_VERTEX_LIGHTING
 #endif // !defined(ADDITIVE_OMNI) && !defined(ADDITIVE_SPOT)
 
 #ifdef ADDITIVE_OMNI
@@ -2541,7 +2542,7 @@ void main() {
 	omni_shadow = texture(omni_shadow_texture, vec4(light_ray, 1.0 - length(light_ray) * omni_lights[omni_light_index].inv_radius));
 	omni_shadow = mix(1.0, omni_shadow, omni_lights[omni_light_index].shadow_opacity);
 #endif // SHADOWS_DISABLED
-#if !defined(USE_VERTEX_LIGHTING)
+#ifndef USE_VERTEX_LIGHTING
 	light_process_omni(omni_light_index, vertex, view, normal, f0, roughness, metallic, omni_shadow, albedo, alpha,
 #ifdef LIGHT_BACKLIGHT_USED
 			backlight,
@@ -2560,7 +2561,7 @@ void main() {
 #else // Pass Vertex Lighting data to fragment colors with fragment shadows
 	specular_light += specular_light_interp.rgb * omni_shadow;
 	diffuse_light += diffuse_light_interp.rgb * omni_shadow;
-#endif // !defined(USE_VERTEX_LIGHTING)
+#endif // !USE_VERTEX_LIGHTING
 #endif // ADDITIVE_OMNI
 
 #ifdef ADDITIVE_SPOT
@@ -2569,7 +2570,7 @@ void main() {
 	spot_shadow = sample_shadow(spot_shadow_texture, positional_shadows[positional_shadow_index].shadow_atlas_pixel_size, shadow_coord);
 	spot_shadow = mix(1.0, spot_shadow, spot_lights[spot_light_index].shadow_opacity);
 #endif // SHADOWS_DISABLED
-#if !defined(USE_VERTEX_LIGHTING)
+#ifndef USE_VERTEX_LIGHTING
 	light_process_spot(spot_light_index, vertex, view, normal, f0, roughness, metallic, spot_shadow, albedo, alpha,
 #ifdef LIGHT_BACKLIGHT_USED
 			backlight,
@@ -2589,11 +2590,13 @@ void main() {
 #else // Pass Vertex Lighting data to fragment colors with fragment shadows
 	specular_light += specular_light_interp.rgb * spot_shadow;
 	diffuse_light += diffuse_light_interp.rgb * spot_shadow;
-#endif // !defined(USE_VERTEX_LIGHTING)
+#endif // !USE_VERTEX_LIGHTING
 
 #endif // ADDITIVE_SPOT
 
+#ifndef USE_VERTEX_LIGHTING
 	diffuse_light *= albedo;
+#endif
 	diffuse_light *= 1.0 - metallic;
 	vec3 additive_light_color = diffuse_light + specular_light;
 
