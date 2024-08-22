@@ -1154,6 +1154,13 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 			set_caret_line(get_caret_line(i) - 1, false, true, 0, i);
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 		}
+
+		// Insert a documentation comment if the caret was previously on a comment block.
+		String prev_line = get_line(get_caret_line(i) - 1);
+
+		if (prev_line.strip_edges().begins_with("##")) {
+			insert_text_at_caret("## ", i);
+		}
 	}
 
 	end_multicaret_edit();
