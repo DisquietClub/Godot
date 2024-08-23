@@ -154,6 +154,8 @@ void AnimationPlayerEditor::_notification(int p_what) {
 			play_from->set_icon(get_editor_theme_icon(SNAME("Play")));
 			play_bw->set_icon(get_editor_theme_icon(SNAME("PlayStartBackwards")));
 			play_bw_from->set_icon(get_editor_theme_icon(SNAME("PlayBackwards")));
+			next_keyframe->set_icon(get_editor_theme_icon(SNAME("NextKeyframe")));
+			prev_keyframe->set_icon(get_editor_theme_icon(SNAME("PreviousKeyframe")));
 
 			autoplay_icon = get_editor_theme_icon(SNAME("AutoPlay"));
 			reset_icon = get_editor_theme_icon(SNAME("Reload"));
@@ -222,6 +224,69 @@ void AnimationPlayerEditor::_autoplay_pressed() {
 		undo_redo->add_undo_method(this, "_animation_player_changed", player);
 		undo_redo->commit_action();
 	}
+}
+
+void AnimationPlayerEditor::_go_to_nearest_keyframe(bool p_backward) {
+	if (_get_current().is_empty()) {
+		return;
+	}
+
+	Ref<Animation> anim = player->get_animation(player->get_assigned_animation());
+
+	double current_time = player->get_current_animation_position();
+	// Offset the time to avoid finding the same keyframe with Animation::track_find_key()
+	double time_offset = MAX(CMP_EPSILON * 2, current_time * CMP_EPSILON * 2);
+	double current_time_offset = current_time + (p_backward ? -time_offset : time_offset);
+
+	float nearest_key_time = p_backward ? 0 : anim->get_length();
+	int track_count = anim->get_track_count();
+	bool bezier_active = track_editor->is_bezier_editor_active();
+
+	Node *root = get_tree()->get_edited_scene_root();
+	EditorSelection *selection = EditorNode::get_singleton()->get_editor_selection();
+
+	Vector<int> selected_tracks;
+	for (int i = 0; i < track_count; ++i) {
+		if (selection->is_selected(root->get_node_or_null(anim->track_get_path(i)))) {
+			selected_tracks.push_back(i);
+		}
+	}
+
+	// Find the nearest keyframe in selection if the scene has selected nodes
+	// or the nearest keyframe in the entire animation otherwise.
+	if (selected_tracks.size() > 0) {
+		for (int track : selected_tracks) {
+			if (bezier_active && anim->track_get_type(track) != Animation::TYPE_BEZIER) {
+				continue;
+			}
+			int key = anim->track_find_key(track, current_time_offset, Animation::FIND_MODE_NEAREST, false, !p_backward);
+			if (key == -1) {
+				continue;
+			}
+			double key_time = anim->track_get_key_time(track, key);
+			if ((p_backward && key_time > nearest_key_time) || (!p_backward && key_time < nearest_key_time)) {
+				nearest_key_time = key_time;
+			}
+		}
+	} else {
+		for (int track = 0; track < track_count; ++track) {
+			if (bezier_active && anim->track_get_type(track) != Animation::TYPE_BEZIER) {
+				continue;
+			}
+			int key = anim->track_find_key(track, current_time_offset, Animation::FIND_MODE_NEAREST, false, !p_backward);
+			if (key == -1) {
+				continue;
+			}
+			double key_time = anim->track_get_key_time(track, key);
+			if ((p_backward && key_time > nearest_key_time) || (!p_backward && key_time < nearest_key_time)) {
+				nearest_key_time = key_time;
+			}
+		}
+	}
+
+	player->seek_internal(nearest_key_time, true, true, true);
+	frame->set_value(nearest_key_time);
+	track_editor->set_anim_pos(nearest_key_time);
 }
 
 void AnimationPlayerEditor::_play_pressed() {
@@ -980,6 +1045,8 @@ void AnimationPlayerEditor::_set_controls_disabled(bool p_disabled) {
 	play_bw->set_disabled(p_disabled);
 	play_bw_from->set_disabled(p_disabled);
 	play_from->set_disabled(p_disabled);
+	next_keyframe->set_disabled(p_disabled);
+	prev_keyframe->set_disabled(p_disabled);
 	animation->set_disabled(p_disabled);
 	autoplay->set_disabled(p_disabled);
 	onion_toggle->set_disabled(p_disabled);
@@ -1505,13 +1572,17 @@ void AnimationPlayerEditor::shortcut_input(const Ref<InputEvent> &p_ev) {
 	ERR_FAIL_COND(p_ev.is_null());
 
 	Ref<InputEventKey> k = p_ev;
-	if (is_visible_in_tree() && k.is_valid() && k->is_pressed() && !k->is_echo() && !k->is_alt_pressed() && !k->is_ctrl_pressed() && !k->is_meta_pressed()) {
+	if (is_visible_in_tree() && k.is_valid() && k->is_pressed() && !k->is_echo() && !k->is_ctrl_pressed() && !k->is_meta_pressed()) {
 		switch (k->get_keycode()) {
 			case Key::A: {
-				if (!k->is_shift_pressed()) {
-					_play_bw_from_pressed();
+				if (k->is_shift_pressed()) {
+					if (k->is_alt_pressed()) {
+						_go_to_nearest_keyframe(true);
+					} else {
+						_play_bw_pressed();
+					}
 				} else {
-					_play_bw_pressed();
+					_play_bw_from_pressed();
 				}
 				accept_event();
 			} break;
@@ -1520,10 +1591,14 @@ void AnimationPlayerEditor::shortcut_input(const Ref<InputEvent> &p_ev) {
 				accept_event();
 			} break;
 			case Key::D: {
-				if (!k->is_shift_pressed()) {
-					_play_from_pressed();
+				if (k->is_shift_pressed()) {
+					if (k->is_alt_pressed()) {
+						_go_to_nearest_keyframe(false);
+					} else {
+						_play_pressed();
+					}
 				} else {
-					_play_pressed();
+					_play_from_pressed();
 				}
 				accept_event();
 			} break;
@@ -1910,10 +1985,20 @@ AnimationPlayerEditor::AnimationPlayerEditor(AnimationPlayerEditorPlugin *p_plug
 	play_bw->set_tooltip_text(TTR("Play selected animation backwards from end. (Shift+A)"));
 	hb->add_child(play_bw);
 
+	prev_keyframe = memnew(Button);
+	prev_keyframe->set_theme_type_variation("FlatButton");
+	prev_keyframe->set_tooltip_text(TTR("Go to previous keyframe. (Shift+Alt+A)"));
+	hb->add_child(prev_keyframe);
+
 	stop = memnew(Button);
 	stop->set_theme_type_variation("FlatButton");
 	hb->add_child(stop);
 	stop->set_tooltip_text(TTR("Pause/stop animation playback. (S)"));
+
+	next_keyframe = memnew(Button);
+	next_keyframe->set_theme_type_variation("FlatButton");
+	next_keyframe->set_tooltip_text(TTR("Go to next keyframe. (Shift+Alt+D)"));
+	hb->add_child(next_keyframe);
 
 	play = memnew(Button);
 	play->set_theme_type_variation("FlatButton");
@@ -2080,6 +2165,8 @@ AnimationPlayerEditor::AnimationPlayerEditor(AnimationPlayerEditorPlugin *p_plug
 	play_from->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_play_from_pressed));
 	play_bw->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_play_bw_pressed));
 	play_bw_from->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_play_bw_from_pressed));
+	prev_keyframe->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_go_to_nearest_keyframe).bind(true));
+	next_keyframe->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_go_to_nearest_keyframe).bind(false));
 	stop->connect(SceneStringName(pressed), callable_mp(this, &AnimationPlayerEditor::_stop_pressed));
 
 	animation->connect(SceneStringName(item_selected), callable_mp(this, &AnimationPlayerEditor::_animation_selected));
