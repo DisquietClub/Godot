@@ -132,8 +132,10 @@ TEST_CASE("[PacketPeer][PacketPeerStream] Get packet buffer") {
 	Ref<StreamPeerBuffer> spb;
 	spb.instantiate();
 	// First 4 bytes are the length of the string
-	Vector<uint8_t> buffer = { (uint8_t)(godot_rules.size() - 1), 0, 0, 0 };
-	buffer.append_array(godot_rules.to_ascii_buffer());
+	CharString cs = godot_rules.ascii();
+	Vector<uint8_t> buffer = { (uint8_t)cs.length(), 0, 0, 0 };
+	buffer.resize(4 + cs.length());
+	memcpy(buffer.ptrw() + 4, cs.get_data(), cs.length());
 	spb->set_data_array(buffer);
 
 	PacketPeerStream pps;
@@ -173,8 +175,10 @@ TEST_CASE("[PacketPeer][PacketPeerStream] Put packet buffer") {
 	spb->seek(0);
 	CHECK_EQ(godot_rules, spb->get_string());
 	// First 4 bytes are the length of the string
-	Vector<uint8_t> buffer = { (uint8_t)(godot_rules.size() - 1), 0, 0, 0 };
-	buffer.append_array(godot_rules.to_ascii_buffer());
+	CharString cs = godot_rules.ascii();
+	Vector<uint8_t> buffer = { (uint8_t)cs.length(), 0, 0, 0 };
+	buffer.resize(4 + cs.length());
+	memcpy(buffer.ptrw() + 4, cs.get_data(), cs.length());
 	CHECK_EQ(buffer, spb->get_data_array());
 }
 
