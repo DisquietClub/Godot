@@ -273,6 +273,7 @@ public:
 		RID get_textures(SkyTextureSetVersion p_version, RID p_default_shader_rd, Ref<RenderSceneBuffersRD> p_render_buffers);
 		bool set_radiance_size(int p_radiance_size);
 		bool set_mode(RS::SkyMode p_mode);
+		RS::SkyMode get_effective_mode() const; // Resolves the "SKY_MODE_AUTOMATIC" if any.
 		bool set_material(RID p_material);
 		Ref<Image> bake_panorama(float p_energy, int p_roughness_layers, const Size2i &p_size);
 	};

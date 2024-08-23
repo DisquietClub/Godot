@@ -616,7 +616,7 @@ bool SkyRD::Sky::set_radiance_size(int p_radiance_size) {
 	}
 	radiance_size = p_radiance_size;
 
-	if (mode == RS::SKY_MODE_REALTIME && radiance_size != 256) {
+	if (radiance_size != 256 && get_effective_mode() == RS::SKY_MODE_REALTIME) {
 		WARN_PRINT("Realtime Skies can only use a radiance size of 256. Radiance size will be set to 256 internally.");
 		radiance_size = 256;
 	}
@@ -630,6 +630,31 @@ bool SkyRD::Sky::set_radiance_size(int p_radiance_size) {
 	return true;
 }
 
+RS::SkyMode SkyRD::Sky::get_effective_mode() const {
+	if (mode != RS::SKY_MODE_AUTOMATIC) {
+		return mode;
+	}
+
+	SkyMaterialData *material_data = static_cast<SkyMaterialData *>(RendererRD::MaterialStorage::get_singleton()->material_get_data(material, RendererRD::MaterialStorage::SHADER_TYPE_SKY));
+	SkyShaderData *shader_data = nullptr;
+
+	if (material_data) {
+		shader_data = material_data->shader_data;
+		ERR_FAIL_NULL_V(shader_data, RS::SKY_MODE_REALTIME);
+	}
+
+	if (shader_data) {
+		if (shader_data->uses_time || shader_data->uses_position) {
+			return RS::SKY_MODE_REALTIME;
+		}
+		if (shader_data->uses_light || shader_data->ubo_size > 0) {
+			return RS::SKY_MODE_INCREMENTAL;
+		}
+	}
+
+	return RS::SKY_MODE_QUALITY;
+}
+
 bool SkyRD::Sky::set_mode(RS::SkyMode p_mode) {
 	if (mode == p_mode) {
 		return false;
@@ -637,7 +662,7 @@ bool SkyRD::Sky::set_mode(RS::SkyMode p_mode) {
 
 	mode = p_mode;
 
-	if (mode == RS::SKY_MODE_REALTIME && radiance_size != 256) {
+	if (radiance_size != 256 && get_effective_mode() == RS::SKY_MODE_REALTIME) {
 		WARN_PRINT("Realtime Skies can only use a radiance size of 256. Radiance size will be set to 256 internally.");
 		set_radiance_size(256);
 	}
