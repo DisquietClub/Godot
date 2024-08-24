@@ -1156,9 +1156,9 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 		}
 
 		// Insert a documentation comment if the caret was previously on a comment block.
-		String prev_line = get_line(get_caret_line(i) - 1);
+		int prev_line = get_caret_line(i) - 1;
 
-		if (prev_line.strip_edges().begins_with("##")) {
+		if (is_in_doc_comment(prev_line) != -1) {
 			insert_text_at_caret("## ", i);
 		}
 	}
@@ -1846,6 +1846,10 @@ void CodeEdit::add_comment_delimiter(const String &p_start_key, const String &p_
 	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_COMMENT);
 }
 
+void CodeEdit::add_doc_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
+	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_DOC_COMMENT);
+}
+
 void CodeEdit::remove_comment_delimiter(const String &p_start_key) {
 	_remove_delimiter(p_start_key, TYPE_COMMENT);
 }
@@ -1866,8 +1870,16 @@ TypedArray<String> CodeEdit::get_comment_delimiters() const {
 	return _get_delimiters(TYPE_COMMENT);
 }
 
+TypedArray<String> CodeEdit::get_doc_comment_delimiters() const {
+	return _get_delimiters(TYPE_DOC_COMMENT);
+}
+
 int CodeEdit::is_in_comment(int p_line, int p_column) const {
 	return _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+}
+
+int CodeEdit::is_in_doc_comment(int p_line, int p_column) const {
+	return _is_in_delimiter(p_line, p_column, TYPE_DOC_COMMENT);
 }
 
 String CodeEdit::get_delimiter_start_key(int p_delimiter_idx) const {
@@ -2935,7 +2947,7 @@ void CodeEdit::_update_code_region_tags() {
 
 	// A shorter delimiter has higher priority.
 	for (int i = delimiters.size() - 1; i >= 0; i--) {
-		if (delimiters[i].type != DelimiterType::TYPE_COMMENT) {
+		if (delimiters[i].type != DelimiterType::TYPE_COMMENT && delimiters[i].type != DelimiterType::TYPE_DOC_COMMENT) {
 			continue;
 		}
 		if (delimiters[i].end_key.is_empty() && delimiters[i].line_only == true) {
@@ -3191,7 +3203,7 @@ void CodeEdit::_add_delimiter(const String &p_start_key, const String &p_end_key
 		delimiter_cache.clear();
 		_update_delimiter_cache();
 	}
-	if (p_type == DelimiterType::TYPE_COMMENT) {
+	if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 		_update_code_region_tags();
 	}
 }
@@ -3211,7 +3223,7 @@ void CodeEdit::_remove_delimiter(const String &p_start_key, DelimiterType p_type
 			delimiter_cache.clear();
 			_update_delimiter_cache();
 		}
-		if (p_type == DelimiterType::TYPE_COMMENT) {
+		if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 			_update_code_region_tags();
 		}
 		break;
@@ -3257,7 +3269,7 @@ void CodeEdit::_clear_delimiters(DelimiterType p_type) {
 	if (!setting_delimiters) {
 		_update_delimiter_cache();
 	}
-	if (p_type == DelimiterType::TYPE_COMMENT) {
+	if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 		_update_code_region_tags();
 	}
 }
