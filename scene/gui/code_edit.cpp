@@ -1846,10 +1846,6 @@ void CodeEdit::add_comment_delimiter(const String &p_start_key, const String &p_
 	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_COMMENT);
 }
 
-void CodeEdit::add_doc_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
-	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_DOC_COMMENT);
-}
-
 void CodeEdit::remove_comment_delimiter(const String &p_start_key) {
 	_remove_delimiter(p_start_key, TYPE_COMMENT);
 }
@@ -1870,12 +1866,33 @@ TypedArray<String> CodeEdit::get_comment_delimiters() const {
 	return _get_delimiters(TYPE_COMMENT);
 }
 
-TypedArray<String> CodeEdit::get_doc_comment_delimiters() const {
-	return _get_delimiters(TYPE_DOC_COMMENT);
-}
-
 int CodeEdit::is_in_comment(int p_line, int p_column) const {
 	return _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+}
+
+// Doc comments
+void CodeEdit::add_doc_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
+	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::remove_doc_comment_delimiter(const String &p_start_key) {
+	_remove_delimiter(p_start_key, TYPE_DOC_COMMENT);
+}
+
+bool CodeEdit::has_doc_comment_delimiter(const String &p_start_key) const {
+	return _has_delimiter(p_start_key, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::set_doc_comment_delimiters(const TypedArray<String> &p_doc_comment_delimiters) {
+	_set_delimiters(p_doc_comment_delimiters, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::clear_doc_comment_delimiters() {
+	_clear_delimiters(TYPE_DOC_COMMENT);
+}
+
+TypedArray<String> CodeEdit::get_doc_comment_delimiters() const {
+	return _get_delimiters(TYPE_DOC_COMMENT);
 }
 
 int CodeEdit::is_in_doc_comment(int p_line, int p_column) const {
@@ -2661,6 +2678,17 @@ void CodeEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_in_comment", "line", "column"), &CodeEdit::is_in_comment, DEFVAL(-1));
 
+	// Doc comments
+	ClassDB::bind_method(D_METHOD("add_doc_comment_delimiter", "start_key", "end_key", "line_only"), &CodeEdit::add_doc_comment_delimiter, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("remove_doc_comment_delimiter", "start_key"), &CodeEdit::remove_doc_comment_delimiter);
+	ClassDB::bind_method(D_METHOD("has_doc_comment_delimiter", "start_key"), &CodeEdit::has_doc_comment_delimiter);
+
+	ClassDB::bind_method(D_METHOD("set_doc_comment_delimiters", "comment_delimiters"), &CodeEdit::set_doc_comment_delimiters);
+	ClassDB::bind_method(D_METHOD("clear_doc_comment_delimiters"), &CodeEdit::clear_doc_comment_delimiters);
+	ClassDB::bind_method(D_METHOD("get_doc_comment_delimiters"), &CodeEdit::get_doc_comment_delimiters);
+
+	ClassDB::bind_method(D_METHOD("is_in_comment", "line", "column"), &CodeEdit::is_in_doc_comment, DEFVAL(-1));
+
 	// Util
 	ClassDB::bind_method(D_METHOD("get_delimiter_start_key", "delimiter_index"), &CodeEdit::get_delimiter_start_key);
 	ClassDB::bind_method(D_METHOD("get_delimiter_end_key", "delimiter_index"), &CodeEdit::get_delimiter_end_key);
@@ -2754,6 +2782,7 @@ void CodeEdit::_bind_methods() {
 	ADD_GROUP("Delimiters", "delimiter_");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_strings"), "set_string_delimiters", "get_string_delimiters");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_comments"), "set_comment_delimiters", "get_comment_delimiters");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_doc_comments"), "set_doc_comment_delimiters", "get_doc_comment_delimiters");
 
 	ADD_GROUP("Code Completion", "code_completion_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "code_completion_enabled"), "set_code_completion_enabled", "is_code_completion_enabled");
