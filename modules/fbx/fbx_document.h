@@ -62,6 +62,7 @@ public:
 	Error write_to_filesystem(Ref<GLTFState> p_state, const String &p_path) override;
 
 private:
+	void _convert_meshimporters_recursive(Node *parent);
 	String _get_texture_path(const String &p_base_directory, const String &p_source_file_path) const;
 	void _process_uv_set(PackedVector2Array &uv_array);
 	void _zero_unused_elements(Vector<float> &cur_custom, int start, int end, int num_channels);

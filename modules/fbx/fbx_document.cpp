@@ -2137,7 +2137,28 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 		}
 	}
 	ERR_FAIL_NULL_V(root, nullptr);
+	_convert_meshimporters_recursive(root);
 	return root;
+}
+
+void FBXDocument::_convert_meshimporters_recursive(Node *parent) {
+	TypedArray<Node> children = parent->get_children();
+	for (int i = 0; i < children.size(); i++) {
+		_convert_meshimporters_recursive(cast_to<Node>(children[i]));
+		ImporterMeshInstance3D *child = cast_to<ImporterMeshInstance3D>(children[i]);
+		if (child == nullptr) {
+			continue;
+		}
+		Ref<Mesh> imported_mesh = cast_to<ImporterMeshInstance3D>(child)->get_mesh()->get_mesh();
+		MeshInstance3D *meshinst = memnew(MeshInstance3D);
+		child->replace_by(meshinst);
+		meshinst->set_name(child->get_name());
+		meshinst->set_transform(child->get_transform());
+		meshinst->set_mesh(imported_mesh);
+		meshinst->set_skin(child->get_skin());
+		meshinst->set_skeleton_path(child->get_skeleton_path());
+		memfree(child);
+	}
 }
 
 Error FBXDocument::append_from_buffer(PackedByteArray p_bytes, String p_base_path, Ref<GLTFState> p_state, uint32_t p_flags) {
