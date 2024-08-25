@@ -1159,7 +1159,16 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 		int prev_line = get_caret_line(i) - 1;
 
 		if (is_in_doc_comment(prev_line) != -1) {
-			insert_text_at_caret("## ", i);
+			const String prev_line_content = get_line(prev_line).strip_edges();
+
+			for (const String doc_comment : get_doc_comment_delimiters()) {
+				const String beg = doc_comment.get_slice(" ", 0);
+
+				if (prev_line_content.begins_with(beg)) {
+					insert_text_at_caret(doc_comment + " ", i);
+					break;
+				}
+			}
 		}
 	}
 
@@ -2687,7 +2696,7 @@ void CodeEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("clear_doc_comment_delimiters"), &CodeEdit::clear_doc_comment_delimiters);
 	ClassDB::bind_method(D_METHOD("get_doc_comment_delimiters"), &CodeEdit::get_doc_comment_delimiters);
 
-	ClassDB::bind_method(D_METHOD("is_in_comment", "line", "column"), &CodeEdit::is_in_doc_comment, DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("is_in_doc_comment", "line", "column"), &CodeEdit::is_in_doc_comment, DEFVAL(-1));
 
 	// Util
 	ClassDB::bind_method(D_METHOD("get_delimiter_start_key", "delimiter_index"), &CodeEdit::get_delimiter_start_key);
