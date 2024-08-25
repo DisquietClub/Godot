@@ -109,6 +109,7 @@ class SceneImportSettingsDialog : public ConfirmationDialog {
 	HSlider *animation_slider = nullptr;
 	Button *animation_play_button = nullptr;
 	Button *animation_stop_button = nullptr;
+	Button *animation_toggle_skeleton_visibility = nullptr;
 	Animation::LoopMode animation_loop_mode = Animation::LOOP_NONE;
 	bool animation_pingpong = false;
 	bool previous_import_as_skeleton = false;
@@ -188,6 +189,7 @@ class SceneImportSettingsDialog : public ConfirmationDialog {
 	void _reset_animation(const String &p_animation_name = "");
 	void _animation_slider_value_changed(double p_value);
 	void _animation_finished(const StringName &p_name);
+	void _animation_update_skeleton_visibility();
 	void _material_tree_selected();
 	void _mesh_tree_selected();
 	void _scene_tree_selected();
