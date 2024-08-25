@@ -2157,7 +2157,7 @@ void FBXDocument::_convert_meshimporters_recursive(Node *parent) {
 		meshinst->set_mesh(imported_mesh);
 		meshinst->set_skin(child->get_skin());
 		meshinst->set_skeleton_path(child->get_skeleton_path());
-		memfree(child);
+		memdelete(child);
 	}
 }
 
