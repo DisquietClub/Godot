@@ -2136,7 +2136,6 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 			_import_animation(state, ap, i, p_trimming, p_remove_immutable_tracks);
 		}
 	}
-	print_error("will");
 	//for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
 	//	ERR_CONTINUE(!E.value);
 	//	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
