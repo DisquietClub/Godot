@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  gltf_document_extension_physics.h                                     */
+/*  fbx_document_extension_convert_importer_mesh.h                       */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,25 +28,19 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef GLTF_DOCUMENT_EXTENSION_PHYSICS_H
-#define GLTF_DOCUMENT_EXTENSION_PHYSICS_H
+#ifndef FBX_DOCUMENT_EXTENSION_CONVERT_IMPORTER_MESH_H
+#define FBX_DOCUMENT_EXTENSION_CONVERT_IMPORTER_MESH_H
 
-#include "../gltf_document_extension.h"
-#include "gltf_physics_body.h"
-#include "gltf_physics_shape.h"
+#include "gltf_document_extension.h"
 
-class GLTFDocumentExtensionPhysics : public GLTFDocumentExtension {
-	GDCLASS(GLTFDocumentExtensionPhysics, GLTFDocumentExtension);
+class FBXDocumentExtensionConvertImporterMesh : public GLTFDocumentExtension {
+	GDCLASS(FBXDocumentExtensionConvertImporterMesh, GLTFDocumentExtension);
+
+protected:
+	static void _copy_meta(Object *p_src_object, Object *p_dst_object);
 
 public:
-	// Import process.
-	Error import_preflight(Ref<GLTFState> p_state, Vector<String> p_extensions) override;
-	Vector<String> get_supported_extensions() override;
-	Error parse_node_extensions(Ref<GLTFState> p_state, Ref<GLTFNode> p_gltf_node, Dictionary &p_extensions) override;
-	Node3D *generate_scene_node(Ref<GLTFState> p_state, Ref<GLTFNode> p_gltf_node, Node *p_scene_parent) override;
-	// Export process.
-	void convert_scene_node(Ref<GLTFState> p_state, Ref<GLTFNode> p_gltf_node, Node *p_scene_node) override;
-	Error export_node(Ref<GLTFState> p_state, Ref<GLTFNode> p_gltf_node, Dictionary &r_node_json, Node *p_scene_node) override;
+	Error import_post(Ref<GLTFState> p_state, Node *p_root) override;
 };
 
-#endif // GLTF_DOCUMENT_EXTENSION_PHYSICS_H
+#endif // FBX_DOCUMENT_EXTENSION_CONVERT_IMPORTER_MESH_H

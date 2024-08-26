@@ -31,15 +31,10 @@
 #include "register_types.h"
 
 
-#include "extensions/gltf_document_extension_convert_importer_mesh.h"
-//#include "extensions/gltf_document_extension_texture_ktx.h"
-//#include "extensions/gltf_document_extension_texture_webp.h"
-//#include "extensions/gltf_spec_gloss.h"
-//#include "extensions/physics/gltf_document_extension_physics.h"
-//#include "gltf_document.h"
-//#include "gltf_state.h"
 #include "fbx_document.h"
 #include "fbx_state.h"
+#include "extensions/fbx_document_extension_convert_importer_mesh.hpp"
+
 
 #ifdef TOOLS_ENABLED
 #include "editor/editor_scene_importer_fbx2gltf.h"
