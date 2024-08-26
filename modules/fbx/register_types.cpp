@@ -30,10 +30,9 @@
 
 #include "register_types.h"
 
-
+#include "extensions/fbx_document_extension_convert_importer_mesh.h"
 #include "fbx_document.h"
 #include "fbx_state.h"
-#include "extensions/fbx_document_extension_convert_importer_mesh.h"
 
 
 

@@ -2136,23 +2136,24 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 			_import_animation(state, ap, i, p_trimming, p_remove_immutable_tracks);
 		}
 	}
-	for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
-		ERR_CONTINUE(!E.value);
-		for (Ref<GLTFDocumentExtension> ext : document_extensions) {
-			ERR_CONTINUE(ext.is_null());
-			Dictionary node_json;
-			if (state->json.has("nodes")) {
-				Array nodes = state->json["nodes"];
-				if (0 <= E.key && E.key < nodes.size()) {
-					node_json = nodes[E.key];
-				}
-			}
-			Ref<GLTFNode> gltf_node = state->nodes[E.key];
-			Error err = ext->import_node(p_state, gltf_node, node_json, E.value);
-			ERR_CONTINUE(err != OK);
-		}
-	}
-	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+	print_error("will");
+	//for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
+	//	ERR_CONTINUE(!E.value);
+	//	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+	//		ERR_CONTINUE(ext.is_null());
+	//		Dictionary node_json;
+	//		if (state->json.has("nodes")) {
+	//			Array nodes = state->json["nodes"];
+	//			if (0 <= E.key && E.key < nodes.size()) {
+	//				node_json = nodes[E.key];
+	//			}
+	//		}
+	//		Ref<GLTFNode> gltf_node = state->nodes[E.key];
+	//		Error err = ext->import_node(p_state, gltf_node, node_json, E.value);
+	//		ERR_CONTINUE(err != OK);
+	//	}
+	//}
+	for (Ref<GLTFDocumentExtension> ext : get_all_gltf_document_extensions()) {
 		ERR_CONTINUE(ext.is_null());
 		Error err = ext->import_post(p_state, root);
 		ERR_CONTINUE(err != OK);
