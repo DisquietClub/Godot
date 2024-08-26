@@ -31,7 +31,8 @@
 #ifndef FBX_DOCUMENT_EXTENSION_CONVERT_IMPORTER_MESH_H
 #define FBX_DOCUMENT_EXTENSION_CONVERT_IMPORTER_MESH_H
 
-#include "gltf_document_extension.h"
+#include "modules/gltf/extensions/gltf_document_extension.h"
+#include "modules/gltf/gltf_defines.h"
 
 class FBXDocumentExtensionConvertImporterMesh : public GLTFDocumentExtension {
 	GDCLASS(FBXDocumentExtensionConvertImporterMesh, GLTFDocumentExtension);

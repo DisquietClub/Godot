@@ -44,6 +44,7 @@ void FBXDocumentExtensionConvertImporterMesh::_copy_meta(Object *p_src_object, O
 }
 
 Error FBXDocumentExtensionConvertImporterMesh::import_post(Ref<GLTFState> p_state, Node *p_root) {
+	print_error("test");
 	ERR_FAIL_NULL_V(p_root, ERR_INVALID_PARAMETER);
 	ERR_FAIL_NULL_V(p_state, ERR_INVALID_PARAMETER);
 	List<Node *> queue;
