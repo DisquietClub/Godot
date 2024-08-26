@@ -30,10 +30,10 @@
 
 #include "register_types.h"
 
+#include "extensions/fbx_document_extension_convert_importer_mesh.h"
 
 #include "fbx_document.h"
 #include "fbx_state.h"
-#include "extensions/fbx_document_extension_convert_importer_mesh.hpp"
 
 
 #ifdef TOOLS_ENABLED
@@ -67,9 +67,10 @@ void initialize_fbx_module(ModuleInitializationLevel p_level) {
 	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
 		GDREGISTER_CLASS(FBXDocument);
 		GDREGISTER_CLASS(FBXState);
+		GDREGISTER_CLASS(FBXDocumentExtensionConvertImporterMesh)
 		bool is_editor = Engine::get_singleton()->is_editor_hint();
 		if (!is_editor) {
-			FBX_REGISTER_DOCUMENT_EXTENSION(GLTFDocumentExtensionConvertImporterMesh);
+			FBX_REGISTER_DOCUMENT_EXTENSION(FBXDocumentExtensionConvertImporterMesh);
 		}
 	}
 
