@@ -128,7 +128,6 @@ void initialize_gltf_module(ModuleInitializationLevel p_level) {
 		bool is_editor = Engine::get_singleton()->is_editor_hint();
 		if (!is_editor) {
 			GLTF_REGISTER_DOCUMENT_EXTENSION(GLTFDocumentExtensionConvertImporterMesh);
-		}
 	}
 
 #ifdef TOOLS_ENABLED
