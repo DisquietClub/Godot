@@ -83,11 +83,20 @@ void CreateDialog::_fill_type_list() {
 	ScriptServer::get_global_class_list(&complete_type_list);
 
 	EditorData &ed = EditorNode::get_editor_data();
+	HashMap<String, DocData::ClassDoc> class_docs_list = EditorHelp::get_doc_data()->class_list;
 
 	for (List<StringName>::Element *I = complete_type_list.front(); I; I = I->next()) {
 		StringName type = I->get();
 		if (!_should_hide_type(type)) {
-			type_list.push_back(type);
+			Pair<StringName, PackedStringArray> type_info;
+			type_info.first = type;
+
+			const DocData::ClassDoc *class_docs = class_docs_list.getptr(type);
+			if (class_docs) {
+				type_info.second = class_docs->keywords.split(",");
+			}
+
+			type_list.push_back(type_info);
 
 			if (!ed.get_custom_types().has(type)) {
 				continue;
@@ -97,11 +106,14 @@ void CreateDialog::_fill_type_list() {
 			for (int i = 0; i < ct.size(); i++) {
 				custom_type_parents[ct[i].name] = type;
 				custom_type_indices[ct[i].name] = i;
-				type_list.push_back(ct[i].name);
+
+				Pair<StringName, PackedStringArray> custom_type_info;
+				custom_type_info.first = ct[i].name;
+				type_list.push_back(custom_type_info);
 			}
 		}
 	}
-	type_list.sort_custom<StringName::AlphCompare>();
+	type_list.sort_custom<TypeListCompare>();
 }
 
 bool CreateDialog::_is_type_preferred(const String &p_type) const {
@@ -182,32 +194,47 @@ void CreateDialog::_update_search() {
 	root->set_text(0, base_type);
 	root->set_icon(0, search_options->get_editor_theme_icon(icon_fallback));
 	search_options_types[base_type] = root;
-	_configure_search_option_item(root, base_type, ClassDB::class_exists(base_type) ? TypeCategory::CPP_TYPE : TypeCategory::OTHER_TYPE);
+	_configure_search_option_item(root, base_type, ClassDB::class_exists(base_type) ? TypeCategory::CPP_TYPE : TypeCategory::OTHER_TYPE, "");
 
 	const String search_text = search_box->get_text();
-	bool empty_search = search_text.is_empty();
 
 	float highest_score = 0.0f;
 	StringName best_match;
 
-	for (List<StringName>::Element *I = type_list.front(); I; I = I->next()) {
-		StringName candidate = I->get();
-		if (empty_search || search_text.is_subsequence_ofn(candidate)) {
-			_add_type(candidate, ClassDB::class_exists(candidate) ? TypeCategory::CPP_TYPE : TypeCategory::OTHER_TYPE);
+	for (List<Pair<StringName, PackedStringArray>>::Element *I = type_list.front(); I; I = I->next()) {
+		Pair<StringName, PackedStringArray> candidate = I->get();
 
-			// Determine the best match for an non-empty search.
-			if (!empty_search) {
-				float score = _score_type(candidate.operator String().get_slicec(' ', 0), search_text);
-				if (score > highest_score) {
-					highest_score = score;
-					best_match = candidate;
+		String match_keyword;
+
+		// First check if the name matches. If it does not, try the search keywords.
+		float score = _compute_search_score(candidate.first, search_text);
+		if (score < 0.0f) {
+			for (String keyword : candidate.second) {
+				keyword = keyword.strip_edges();
+				score = _compute_search_score(keyword, search_text);
+
+				if (score >= 0.0f) {
+					match_keyword = keyword;
+					break;
 				}
 			}
+		}
+
+		// Search did not match.
+		if (score < 0.0f) {
+			continue;
+		}
+
+		_add_type(candidate.first, ClassDB::class_exists(candidate.first) ? TypeCategory::CPP_TYPE : TypeCategory::OTHER_TYPE, match_keyword);
+
+		if (score > highest_score) {
+			highest_score = score;
+			best_match = candidate.first;
 		}
 	}
 
 	// Select the best result.
-	if (empty_search) {
+	if (search_text.is_empty()) {
 		select_type(base_type);
 	} else if (best_match != StringName()) {
 		select_type(best_match);
@@ -219,7 +246,20 @@ void CreateDialog::_update_search() {
 	}
 }
 
-void CreateDialog::_add_type(const StringName &p_type, TypeCategory p_type_category) {
+float CreateDialog::_compute_search_score(const String &p_text, const String &p_search_text) const {
+	if (p_search_text.is_empty()) {
+		return 0.0f;
+	}
+
+	// Determine the best match for a non-empty search.
+	if (!p_search_text.is_subsequence_ofn(p_text)) {
+		return -1.0f;
+	}
+
+	return _score_type(p_text.get_slicec(' ', 0), p_search_text);
+}
+
+void CreateDialog::_add_type(const StringName &p_type, TypeCategory p_type_category, const String &p_match_keyword) {
 	if (search_options_types.has(p_type)) {
 		return;
 	}
@@ -271,23 +311,24 @@ void CreateDialog::_add_type(const StringName &p_type, TypeCategory p_type_categ
 	// Should never happen, but just in case...
 	ERR_FAIL_COND(inherits == StringName());
 
-	_add_type(inherits, inherited_type);
+	_add_type(inherits, inherited_type, "");
 
 	TreeItem *item = search_options->create_item(search_options_types[inherits]);
 	search_options_types[p_type] = item;
-	_configure_search_option_item(item, p_type, p_type_category);
+	_configure_search_option_item(item, p_type, p_type_category, p_match_keyword);
 }
 
-void CreateDialog::_configure_search_option_item(TreeItem *r_item, const StringName &p_type, TypeCategory p_type_category) {
+void CreateDialog::_configure_search_option_item(TreeItem *r_item, const StringName &p_type, TypeCategory p_type_category, const String &p_match_keyword) {
 	bool script_type = ScriptServer::is_global_class(p_type);
 	bool is_abstract = false;
+	String text;
 	if (p_type_category == TypeCategory::CPP_TYPE) {
-		r_item->set_text(0, p_type);
+		text = p_type;
 	} else if (p_type_category == TypeCategory::PATH_TYPE) {
-		r_item->set_text(0, "\"" + p_type + "\"");
+		text = "\"" + p_type + "\"";
 	} else if (script_type) {
 		r_item->set_metadata(0, p_type);
-		r_item->set_text(0, p_type);
+		text = p_type;
 		String script_path = ScriptServer::get_global_class_path(p_type);
 		r_item->set_suffix(0, "(" + script_path.get_file() + ")");
 
@@ -296,8 +337,13 @@ void CreateDialog::_configure_search_option_item(TreeItem *r_item, const StringN
 		is_abstract = scr->is_abstract();
 	} else {
 		r_item->set_metadata(0, custom_type_parents[p_type]);
-		r_item->set_text(0, p_type);
+		text = p_type;
 	}
+
+	if (!p_match_keyword.is_empty()) {
+		text += "      - " + TTR(vformat("Matches the \"%s\" keyword.", p_match_keyword));
+	}
+	r_item->set_text(0, text);
 
 	bool can_instantiate = (p_type_category == TypeCategory::CPP_TYPE && ClassDB::can_instantiate(p_type)) ||
 			(p_type_category == TypeCategory::OTHER_TYPE && !is_abstract);
