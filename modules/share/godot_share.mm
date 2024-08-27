@@ -84,12 +84,12 @@ void GodotShare::rate() {
 		[SKStoreReviewController requestReview];
 	}
 #elif TARGET_OS_OSX
-    /* linker error
-       https://developer.apple.com/documentation/storekit/skstorereviewcontroller
+	/* linker error
+	   https://developer.apple.com/documentation/storekit/skstorereviewcontroller
 	if (@available(macos 10.14, *)) {
 		[SKStoreReviewController requestReview];
-    }
-    */
+	}
+	*/
 	NSString *appId = @"id6446126962"; // Your app Id from the Itunes Connect portal
 
 	NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://apps.apple.com/app/%@?action=write-review", appId]];
