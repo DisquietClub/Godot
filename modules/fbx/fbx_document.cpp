@@ -2108,6 +2108,15 @@ Error FBXDocument::_parse(Ref<FBXState> p_state, String p_path, Ref<FileAccess> 
 		WARN_PRINT(vformat("FBX: ignored %d further ufbx warnings", ignored_warning_count));
 	}
 
+	document_extensions.clear();
+	for (Ref<GLTFDocumentExtension> ext : all_document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_preflight(p_state, p_state->json["extensionsUsed"]);
+		if (err == OK) {
+			document_extensions.push_back(ext);
+		}
+	}
+
 	err = _parse_fbx_state(p_state, p_path);
 	ERR_FAIL_COND_V(err != OK, err);
 
@@ -2152,7 +2161,7 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 	//		ERR_CONTINUE(err != OK);
 	//	}
 	//}
-	for (Ref<GLTFDocumentExtension> ext : get_all_gltf_document_extensions()) {
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
 		ERR_CONTINUE(ext.is_null());
 		Error err = ext->import_post(p_state, root);
 		ERR_CONTINUE(err != OK);
@@ -2175,12 +2184,11 @@ Error FBXDocument::append_from_buffer(PackedByteArray p_bytes, String p_base_pat
 	state->base_path = p_base_path.get_base_dir();
 	err = _parse(state, state->base_path, file_access);
 	ERR_FAIL_COND_V(err != OK, err);
-	// TODO: 202040118 // fire
-	// for (Ref<GLTFDocumentExtension> ext : get_all_gltf_document_extensions()) {
-	// 	ERR_CONTINUE(ext.is_null());
-	// 	err = ext->import_post_parse(state);
-	// 	ERR_FAIL_COND_V(err != OK, err);
-	// }
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_post_parse(state);
+		ERR_FAIL_COND_V(err != OK, err);
+	}
 	return OK;
 }
 
@@ -2274,12 +2282,11 @@ Error FBXDocument::append_from_file(String p_path, Ref<GLTFState> p_state, uint3
 	state->base_path = base_path;
 	err = _parse(p_state, base_path, file);
 	ERR_FAIL_COND_V(err != OK, err);
-	// TODO: 20240118 // fire
-	// for (Ref<GLTFDocumentExtension> ext : document_extensions) {
-	// 	ERR_CONTINUE(ext.is_null());
-	// 	err = ext->import_post_parse(p_state);
-	// 	ERR_FAIL_COND_V(err != OK, err);
-	// }
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_post_parse(p_state);
+		ERR_FAIL_COND_V(err != OK, err);
+	}
 	return OK;
 }
 
