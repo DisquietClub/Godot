@@ -124,7 +124,7 @@ public:
 
 	PackedStringArray get_configuration_warnings() const override;
 
-	void update_transform(bool p_immediate = false);
+	void update_transform(bool p_immediate = true);
 
 	static Transform3D correct_posture(Transform3D p_transform, PathFollow3D::RotationMode p_rotation_mode);
 
