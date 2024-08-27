@@ -2492,10 +2492,12 @@ PackedByteArray FBXDocument::generate_buffer(Ref<GLTFState> p_state) {
 }
 
 Error FBXDocument::write_to_filesystem(Ref<GLTFState> p_state, const String &p_path) {
+	//todo: everything
 	return ERR_UNAVAILABLE;
 }
 
 Error FBXDocument::append_from_scene(Node *p_node, Ref<GLTFState> p_state, uint32_t p_flags) {
+	//todo: everything
 	return ERR_UNAVAILABLE;
 }
 
