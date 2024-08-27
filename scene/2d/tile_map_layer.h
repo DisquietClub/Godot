@@ -294,6 +294,7 @@ private:
 
 	// Internal.
 	bool pending_update = false;
+	bool cells_initialized = false;
 
 	// For keeping compatibility with TileMap.
 	TileMap *tile_map_node = nullptr;
@@ -459,6 +460,7 @@ public:
 	void notify_runtime_tile_data_update();
 	GDVIRTUAL1R(bool, _use_tile_data_runtime_update, Vector2i);
 	GDVIRTUAL2(_tile_data_runtime_update, Vector2i, TileData *);
+	GDVIRTUAL1(_update_cells, TypedArray<Vector2i>);
 
 	// --- Shortcuts to methods defined in TileSet ---
 	Vector2i map_pattern(const Vector2i &p_position_in_tilemap, const Vector2i &p_coords_in_pattern, Ref<TileMapPattern> p_pattern);

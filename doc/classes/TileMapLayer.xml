@@ -22,6 +22,14 @@
 				[b]Note:[/b] If the properties of [param tile_data] object should change over time, use [method notify_runtime_tile_data_update] to notify the [TileMapLayer] it needs an update.
 			</description>
 		</method>
+		<method name="_update_cells" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="coords" type="Vector2i[]" />
+			<description>
+				Called when the cells of this [TileMapLayer] are changed. [param coords] contains the position of all the changed cells.
+				[b]Note:[/b] This method is called when this [TileMapLayer] updates. Modifications to the [TileMapLayer]'s cells made inside this function will be processed during the next update (at the end of the next frame if [method update_internals] is not called).
+			</description>
+		</method>
 		<method name="_use_tile_data_runtime_update" qualifiers="virtual">
 			<return type="bool" />
 			<param index="0" name="coords" type="Vector2i" />

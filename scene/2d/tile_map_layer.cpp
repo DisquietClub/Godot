@@ -1670,10 +1670,15 @@ void TileMapLayer::_internal_update(bool p_force_cleanup) {
 		dirty.flags[i] = false;
 	}
 
-	// List the cells to delete definitely.
+	// List the cells to delete definitely, and all dirty cell's positions to notify script of cell updates.
 	Vector<Vector2i> to_delete;
+	TypedArray<Vector2i> dirty_cell_positions;
+	bool script_update_callback = cells_initialized && !p_force_cleanup && dirty.cell_list.first() && GDVIRTUAL_IS_OVERRIDDEN(_update_cells);
 	for (SelfList<CellData> *cell_data_list_element = dirty.cell_list.first(); cell_data_list_element; cell_data_list_element = cell_data_list_element->next()) {
 		CellData &cell_data = *cell_data_list_element->self();
+		if (script_update_callback) {
+			dirty_cell_positions.push_back(cell_data.coords);
+		}
 		// Select the cell from tile_map if it is invalid.
 		if (cell_data.cell.source_id == TileSet::INVALID_SOURCE) {
 			to_delete.push_back(cell_data.coords);
@@ -1689,6 +1694,12 @@ void TileMapLayer::_internal_update(bool p_force_cleanup) {
 	dirty.cell_list.clear();
 
 	pending_update = false;
+	cells_initialized = true;
+
+	// Script callback for updated cells
+	if (script_update_callback) {
+		GDVIRTUAL_CALL(_update_cells, dirty_cell_positions);
+	}
 }
 
 void TileMapLayer::_physics_interpolated_changed() {
@@ -1837,6 +1848,7 @@ void TileMapLayer::_bind_methods() {
 
 	GDVIRTUAL_BIND(_use_tile_data_runtime_update, "coords");
 	GDVIRTUAL_BIND(_tile_data_runtime_update, "coords", "tile_data");
+	GDVIRTUAL_BIND(_update_cells, "coords");
 
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_BYTE_ARRAY, "tile_map_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_tile_map_data_from_array", "get_tile_map_data_as_array");
 
