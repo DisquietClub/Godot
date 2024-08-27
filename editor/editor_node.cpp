@@ -111,6 +111,7 @@
 #include "editor/gui/editor_scene_tabs.h"
 #include "editor/gui/editor_title_bar.h"
 #include "editor/gui/editor_toaster.h"
+#include "editor/gui/editor_window_buttons.h"
 #include "editor/history_dock.h"
 #include "editor/import/3d/editor_import_collada.h"
 #include "editor/import/3d/resource_importer_obj.h"
@@ -333,9 +334,27 @@ void EditorNode::_update_title() {
 		title = vformat("(*) %s", title);
 	}
 	DisplayServer::get_singleton()->window_set_title(title + String(" - ") + VERSION_NAME);
-	if (project_title) {
+	if (project_title->is_visible()) {
 		project_title->set_text(title);
 	}
+}
+
+void EditorNode::_editor_settings_changed() {
+	_update_editor_window();
+	_save_editor_layout();
+}
+
+void EditorNode::_update_editor_window() {
+	bool no_title_bar = bool(EDITOR_GET("interface/editor/no_title_bar")) && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_NO_TITLE_BAR);
+	bool can_expand = !no_title_bar && bool(EDITOR_GET("interface/editor/expand_to_title")) && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_EXTEND_TO_TITLE);
+
+	DisplayServer::get_singleton()->window_set_flag(DisplayServer::WINDOW_FLAG_NO_TITLE_BAR, no_title_bar, DisplayServer::MAIN_WINDOW_ID);
+	DisplayServer::get_singleton()->window_set_flag(DisplayServer::WINDOW_FLAG_EXTEND_TO_TITLE, can_expand, DisplayServer::MAIN_WINDOW_ID);
+	title_bar->set_can_move_window(no_title_bar || can_expand);
+	left_menu_spacer->set_visible(can_expand);
+	right_menu_spacer->set_visible(can_expand);
+	project_title->set_visible(no_title_bar || (can_expand && global_menu));
+	window_buttons->set_visible(no_title_bar);
 }
 
 void EditorNode::shortcut_input(const Ref<InputEvent> &p_event) {
@@ -1253,19 +1272,18 @@ void EditorNode::_viewport_resized() {
 }
 
 void EditorNode::_titlebar_resized() {
+	if (!left_menu_spacer->is_visible()) {
+		// Not in expand to title mode.
+		return;
+	}
 	DisplayServer::get_singleton()->window_set_window_buttons_offset(Vector2i(title_bar->get_global_position().y + title_bar->get_size().y / 2, title_bar->get_global_position().y + title_bar->get_size().y / 2), DisplayServer::MAIN_WINDOW_ID);
 	const Vector3i &margin = DisplayServer::get_singleton()->window_get_safe_title_margins(DisplayServer::MAIN_WINDOW_ID);
-	if (left_menu_spacer) {
-		int w = (gui_base->is_layout_rtl()) ? margin.y : margin.x;
-		left_menu_spacer->set_custom_minimum_size(Size2(w, 0));
-	}
-	if (right_menu_spacer) {
-		int w = (gui_base->is_layout_rtl()) ? margin.x : margin.y;
-		right_menu_spacer->set_custom_minimum_size(Size2(w, 0));
-	}
-	if (title_bar) {
-		title_bar->set_custom_minimum_size(Size2(0, margin.z - title_bar->get_global_position().y));
-	}
+
+	int w = (gui_base->is_layout_rtl()) ? margin.y : margin.x;
+	left_menu_spacer->set_custom_minimum_size(Size2(w, 0));
+	right_menu_spacer->set_custom_minimum_size(Size2(w, 0));
+
+	title_bar->set_custom_minimum_size(Size2(0, margin.z - title_bar->get_global_position().y));
 }
 
 void EditorNode::_update_undo_redo_allowed() {
@@ -2020,6 +2038,10 @@ void EditorNode::try_autosave() {
 	}
 	_menu_option(FILE_SAVE_ALL_SCENES);
 	editor_data.save_editor_external_data();
+}
+
+void EditorNode::exit() {
+	_menu_option_confirm(FILE_QUIT, false);
 }
 
 void EditorNode::restart_editor() {
@@ -5380,6 +5402,13 @@ void EditorNode::_save_window_settings_to_config(Ref<ConfigFile> p_layout, const
 				break;
 		}
 
+		// Saving the no title bar to set the correct window flag on startup
+		// otherwise the window size will be corrected to a "normal" window causing
+		// it to move up.
+		if (w->get_flag(Window::FLAG_NO_TITLE_BAR)) {
+			p_layout->set_value(p_section, "no_title_bar", true);
+		}
+
 		p_layout->set_value(p_section, "position", w->get_position());
 	}
 }
@@ -6737,6 +6766,7 @@ EditorNode::EditorNode() {
 	if (!EditorSettings::get_singleton()) {
 		EditorSettings::create();
 	}
+	EditorSettings::get_singleton()->connect("settings_changed", callable_mp(this, &EditorNode::_editor_settings_changed));
 
 	ED_SHORTCUT("editor/lock_selected_nodes", TTR("Lock Selected Node(s)"), KeyModifierMask::CMD_OR_CTRL | Key::L);
 	ED_SHORTCUT("editor/unlock_selected_nodes", TTR("Unlock Selected Node(s)"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::L);
@@ -7130,18 +7160,21 @@ EditorNode::EditorNode() {
 	main_screen_vbox->add_theme_constant_override("separation", 0);
 	scene_root_parent->add_child(main_screen_vbox);
 
-	bool global_menu = !bool(EDITOR_GET("interface/editor/use_embedded_menu")) && NativeMenu::get_singleton()->has_feature(NativeMenu::FEATURE_GLOBAL_MENU);
-	bool can_expand = bool(EDITOR_GET("interface/editor/expand_to_title")) && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_EXTEND_TO_TITLE);
+	// Spacer to center 2D / 3D / Script buttons.
+	HBoxContainer *title_left_section = memnew(HBoxContainer);
+	title_left_section->set_mouse_filter(Control::MOUSE_FILTER_PASS);
+	title_left_section->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	title_bar->add_child(title_left_section);
 
-	if (can_expand) {
-		// Add spacer to avoid other controls under window minimize/maximize/close buttons (left side).
-		left_menu_spacer = memnew(Control);
-		left_menu_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
-		title_bar->add_child(left_menu_spacer);
-	}
+	global_menu = !bool(EDITOR_GET("interface/editor/use_embedded_menu")) && NativeMenu::get_singleton()->has_feature(NativeMenu::FEATURE_GLOBAL_MENU);
+
+	// Add spacer to avoid other controls under window minimize/maximize/close buttons (left side).
+	left_menu_spacer = memnew(Control);
+	left_menu_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
+	title_left_section->add_child(left_menu_spacer);
 
 	main_menu = memnew(MenuBar);
-	title_bar->add_child(main_menu);
+	title_left_section->add_child(main_menu);
 	main_menu->set_theme_type_variation("MainMenuBar");
 	main_menu->set_start_index(0); // Main menu, add to the start of global menu.
 	main_menu->set_prefer_global_menu(global_menu);
@@ -7304,23 +7337,15 @@ EditorNode::EditorNode() {
 	ED_SHORTCUT_OVERRIDE("editor/quit_to_project_list", "macos", KeyModifierMask::META + KeyModifierMask::CTRL + KeyModifierMask::ALT + Key::Q);
 	project_menu->add_shortcut(ED_GET_SHORTCUT("editor/quit_to_project_list"), RUN_PROJECT_MANAGER, true);
 
-	// Spacer to center 2D / 3D / Script buttons.
-	HBoxContainer *left_spacer = memnew(HBoxContainer);
-	left_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
-	left_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	title_bar->add_child(left_spacer);
-
-	if (can_expand && global_menu) {
-		project_title = memnew(Label);
-		project_title->add_theme_font_override(SceneStringName(font), theme->get_font(SNAME("bold"), EditorStringName(EditorFonts)));
-		project_title->add_theme_font_size_override(SceneStringName(font_size), theme->get_font_size(SNAME("bold_size"), EditorStringName(EditorFonts)));
-		project_title->set_focus_mode(Control::FOCUS_NONE);
-		project_title->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
-		project_title->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
-		project_title->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-		project_title->set_mouse_filter(Control::MOUSE_FILTER_PASS);
-		left_spacer->add_child(project_title);
-	}
+	project_title = memnew(Label);
+	project_title->add_theme_font_override(SceneStringName(font), theme->get_font(SNAME("bold"), EditorStringName(EditorFonts)));
+	project_title->add_theme_font_size_override(SceneStringName(font_size), theme->get_font_size(SNAME("bold_size"), EditorStringName(EditorFonts)));
+	project_title->set_focus_mode(Control::FOCUS_NONE);
+	project_title->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
+	project_title->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
+	project_title->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	project_title->set_mouse_filter(Control::MOUSE_FILTER_PASS);
+	title_left_section->add_child(project_title);
 
 	main_editor_button_hb = memnew(HBoxContainer);
 	title_bar->add_child(main_editor_button_hb);
@@ -7413,18 +7438,19 @@ EditorNode::EditorNode() {
 	help_menu->add_icon_shortcut(theme->get_icon(SNAME("Heart"), EditorStringName(EditorIcons)), ED_SHORTCUT_AND_COMMAND("editor/support_development", TTR("Support Godot Development")), HELP_SUPPORT_GODOT_DEVELOPMENT);
 
 	// Spacer to center 2D / 3D / Script buttons.
-	Control *right_spacer = memnew(Control);
-	right_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
-	right_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	title_bar->add_child(right_spacer);
+	HBoxContainer *title_right_section = memnew(HBoxContainer);
+	title_right_section->set_mouse_filter(Control::MOUSE_FILTER_PASS);
+	title_right_section->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	title_right_section->set_alignment(BoxContainer::AlignmentMode::ALIGNMENT_END);
+	title_bar->add_child(title_right_section);
 
 	project_run_bar = memnew(EditorRunBar);
-	title_bar->add_child(project_run_bar);
+	title_right_section->add_child(project_run_bar);
 	project_run_bar->connect("play_pressed", callable_mp(this, &EditorNode::_project_run_started));
 	project_run_bar->connect("stop_pressed", callable_mp(this, &EditorNode::_project_run_stopped));
 
 	HBoxContainer *right_menu_hb = memnew(HBoxContainer);
-	title_bar->add_child(right_menu_hb);
+	title_right_section->add_child(right_menu_hb);
 
 	renderer = memnew(OptionButton);
 	renderer->set_visible(true);
@@ -7436,12 +7462,13 @@ EditorNode::EditorNode() {
 
 	right_menu_hb->add_child(renderer);
 
-	if (can_expand) {
-		// Add spacer to avoid other controls under the window minimize/maximize/close buttons (right side).
-		right_menu_spacer = memnew(Control);
-		right_menu_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
-		title_bar->add_child(right_menu_spacer);
-	}
+	window_buttons = memnew(EditorWindowButtons);
+	title_right_section->add_child(window_buttons);
+
+	// Add spacer to avoid other controls under the window minimize/maximize/close buttons (right side).
+	right_menu_spacer = memnew(Control);
+	right_menu_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
+	title_right_section->add_child(right_menu_spacer);
 
 	String current_renderer_ps = GLOBAL_GET("rendering/renderer/rendering_method");
 	current_renderer_ps = current_renderer_ps.to_lower();
@@ -7908,16 +7935,14 @@ EditorNode::EditorNode() {
 	screenshot_timer->set_owner(get_owner());
 
 	// Adjust spacers to center 2D / 3D / Script buttons.
-	int max_w = MAX(project_run_bar->get_minimum_size().x + right_menu_hb->get_minimum_size().x, main_menu->get_minimum_size().x);
-	left_spacer->set_custom_minimum_size(Size2(MAX(0, max_w - main_menu->get_minimum_size().x), 0));
-	right_spacer->set_custom_minimum_size(Size2(MAX(0, max_w - project_run_bar->get_minimum_size().x - right_menu_hb->get_minimum_size().x), 0));
+	int window_buttons_size = (window_buttons ? window_buttons->get_minimum_size().x : 0);
+	int left_side_size = main_menu->get_minimum_size().x;
+	int right_side_size = project_run_bar->get_minimum_size().x + right_menu_hb->get_minimum_size().x + window_buttons_size;
+	int max_sides_size = MAX(left_side_size, right_side_size);
+	title_left_section->set_custom_minimum_size(Size2(max_sides_size, 0));
+	title_right_section->set_custom_minimum_size(Size2(max_sides_size, 0));
 
-	// Extend menu bar to window title.
-	if (can_expand) {
-		DisplayServer::get_singleton()->process_events();
-		DisplayServer::get_singleton()->window_set_flag(DisplayServer::WINDOW_FLAG_EXTEND_TO_TITLE, true, DisplayServer::MAIN_WINDOW_ID);
-		title_bar->set_can_move_window(true);
-	}
+	_update_editor_window();
 
 	String exec = OS::get_singleton()->get_executable_path();
 	// Save editor executable path for third-party tools.

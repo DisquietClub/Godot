@@ -2372,6 +2372,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		if (bool(GLOBAL_GET("display/window/size/no_focus"))) {
 			window_flags |= DisplayServer::WINDOW_FLAG_NO_FOCUS_BIT;
 		}
+		if (bool(GLOBAL_GET("display/window/size/no_title_bar"))) {
+			window_flags |= DisplayServer::WINDOW_FLAG_NO_TITLE_BAR_BIT;
+		}
 		window_mode = (DisplayServer::WindowMode)(GLOBAL_GET("display/window/size/mode").operator int());
 		int initial_position_type = GLOBAL_GET("display/window/size/initial_position_type").operator int();
 		if (initial_position_type == 0) { // Absolute.
@@ -2808,6 +2811,10 @@ Error Main::setup2(bool p_show_boot_logo) {
 				if (init_windowed) {
 					init_use_custom_pos = true;
 					init_custom_pos = config->get_value("EditorWindow", "position", Vector2i(0, 0));
+				}
+
+				if (config->get_value("EditorWindow", "no_title_bar", false)) {
+					window_flags |= DisplayServer::WINDOW_FLAG_NO_TITLE_BAR_BIT;
 				}
 			}
 		}

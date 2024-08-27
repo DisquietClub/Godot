@@ -409,7 +409,7 @@ Point2i Window::get_position_with_decorations() const {
 	if (window_id != DisplayServer::INVALID_WINDOW_ID) {
 		return DisplayServer::get_singleton()->window_get_position_with_decorations(window_id);
 	}
-	if (visible && is_embedded() && !get_flag(Window::FLAG_BORDERLESS)) {
+	if (visible && is_embedded() && !get_flag(Window::FLAG_BORDERLESS) && !get_flag(Window::FLAG_NO_TITLE_BAR)) {
 		Size2 border_offset;
 		if (theme_cache.embedded_border.is_valid()) {
 			border_offset = theme_cache.embedded_border->get_offset();
@@ -427,7 +427,7 @@ Size2i Window::get_size_with_decorations() const {
 	if (window_id != DisplayServer::INVALID_WINDOW_ID) {
 		return DisplayServer::get_singleton()->window_get_size_with_decorations(window_id);
 	}
-	if (visible && is_embedded() && !get_flag(Window::FLAG_BORDERLESS)) {
+	if (visible && is_embedded() && !get_flag(Window::FLAG_BORDERLESS) && !get_flag(Window::FLAG_NO_TITLE_BAR)) {
 		Size2 border_size;
 		if (theme_cache.embedded_border.is_valid()) {
 			border_size = theme_cache.embedded_border->get_minimum_size();
@@ -1940,7 +1940,7 @@ Rect2i Window::fit_rect_in_parent(Rect2i p_rect, const Rect2i &p_parent_rect) co
 		p_rect.position.x = 0;
 	}
 
-	int title_height = get_flag(Window::FLAG_BORDERLESS) ? 0 : theme_cache.title_height;
+	int title_height = get_flag(Window::FLAG_BORDERLESS) || get_flag(Window::FLAG_NO_TITLE_BAR) ? 0 : theme_cache.title_height;
 
 	if (p_rect.position.y < title_height) {
 		p_rect.position.y = title_height;
@@ -2997,6 +2997,7 @@ void Window::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "popup_window"), "set_flag", "get_flag", FLAG_POPUP);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "extend_to_title"), "set_flag", "get_flag", FLAG_EXTEND_TO_TITLE);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "mouse_passthrough"), "set_flag", "get_flag", FLAG_MOUSE_PASSTHROUGH);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "no_title"), "set_flag", "get_flag", FLAG_NO_TITLE_BAR);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "force_native"), "set_force_native", "get_force_native");
 
 	ADD_GROUP("Limits", "");
@@ -3051,6 +3052,7 @@ void Window::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_EXTEND_TO_TITLE);
 	BIND_ENUM_CONSTANT(FLAG_MOUSE_PASSTHROUGH);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
+	BIND_ENUM_CONSTANT(FLAG_NO_TITLE_BAR);
 
 	BIND_ENUM_CONSTANT(CONTENT_SCALE_MODE_DISABLED);
 	BIND_ENUM_CONSTANT(CONTENT_SCALE_MODE_CANVAS_ITEMS);
