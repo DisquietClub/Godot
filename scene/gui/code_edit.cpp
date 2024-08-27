@@ -1155,8 +1155,8 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 		}
 
-		// Insert a documentation comment if the caret was previously on a comment block.
-		int prev_line = get_caret_line(i) - 1;
+		// Insert a documentation comment if the caret was previously on a documentation comment block.
+		int prev_line = get_caret_line(i) + (p_above ?  1 : -1);
 
 		if (is_in_doc_comment(prev_line) != -1) {
 			const String prev_line_content = get_line(prev_line).strip_edges();
