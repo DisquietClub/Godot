@@ -1102,7 +1102,6 @@ uniform uint spot_light_count;
 #endif // DISABLE_LIGHT_SPOT
 #endif // !defined(DISABLE_LIGHT_OMNI) || !defined(DISABLE_LIGHT_SPOT)
 
-
 #ifdef USE_ADDITIVE_LIGHTING
 #ifdef ADDITIVE_OMNI
 uniform highp samplerCubeShadow omni_shadow_texture; // texunit:-3

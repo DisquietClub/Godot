@@ -309,23 +309,6 @@ vec3 double_add_vec3(vec3 base_a, vec3 prec_a, vec3 base_b, vec3 prec_b, out vec
 }
 #endif
 
-#ifdef USE_VERTEX_LIGHTING
-void cluster_get_item_range(uint p_offset, out uint item_min, out uint item_max, out uint item_from, out uint item_to) {
-	uint item_min_max = cluster_buffer.data[p_offset];
-	item_min = item_min_max & 0xFFFFu;
-	item_max = item_min_max >> 16;
-
-	item_from = item_min >> 5;
-	item_to = (item_max == 0) ? 0 : ((item_max - 1) >> 5) + 1; //side effect of how it is stored, as item_max 0 means no elements
-}
-
-uint cluster_get_range_clip_mask(uint i, uint z_min, uint z_max) {
-	int local_min = clamp(int(z_min) - int(i) * 32, 0, 31);
-	int mask_width = min(int(z_max) - int(z_min), 32 - local_min);
-	return bitfieldInsert(uint(0), uint(0xFFFFFFFF), local_min, mask_width);
-}
-#endif // USE_VERTEX_LIGHTING
-
 void vertex_shader(vec3 vertex_input,
 #ifdef NORMAL_USED
 		in vec3 normal_input,
@@ -630,16 +613,8 @@ void vertex_shader(vec3 vertex_input,
 	diffuse_light_interp = vec4(0.0);
 	specular_light_interp = vec4(0.0);
 
-	// UV in our combined frustum space is used for certain screen uv processes where it's
-	// overkill to render separate left and right eye views
-	vec2 combined_uv = (combined_projected.xy / combined_projected.w) * 0.5 + 0.5;
-
-	uvec2 cluster_pos = uvec2(combined_uv.xy / scene_data.screen_pixel_size) >> implementation_data.cluster_shift;
 	vec3 view = -normalize(vertex_interp - eye_offset);
-	uint cluster_offset = (implementation_data.cluster_width * cluster_pos.y + cluster_pos.x) * (implementation_data.max_cluster_element_count_div_32 + 32);
 
-	uint cluster_z = uint(clamp((-vertex.z / scene_data.z_far) * 32.0, 0.0, 31.0));
-	//used for interpolating anything cluster related
 	vec3 vertex_ddx = vec3(0); // Fake variable
 	vec3 vertex_ddy = vec3(0); // Fake variable
 
@@ -695,101 +670,43 @@ void vertex_shader(vec3 vertex_input,
 	}
 
 	{ //omni lights
+		for (uint i = 0; i < 8; i++) {
+			uint light_index = 32 * i & 0xFF;
 
-		uint cluster_omni_offset = cluster_offset;
-
-		uint item_min;
-		uint item_max;
-		uint item_from;
-		uint item_to;
-
-		cluster_get_item_range(cluster_omni_offset + implementation_data.max_cluster_element_count_div_32 + cluster_z, item_min, item_max, item_from, item_to);
-
-#ifdef USE_SUBGROUPS
-		item_from = subgroupBroadcastFirst(subgroupMin(item_from));
-		item_to = subgroupBroadcastFirst(subgroupMax(item_to));
-#endif
-
-		for (uint i = item_from; i < item_to; i++) {
-			uint mask = cluster_buffer.data[cluster_omni_offset + i];
-			mask &= cluster_get_range_clip_mask(i, item_min, item_max);
-#ifdef USE_SUBGROUPS
-			uint merged_mask = subgroupBroadcastFirst(subgroupOr(mask));
-#else
-			uint merged_mask = mask;
-#endif
-
-			while (merged_mask != 0) {
-				uint bit = findMSB(merged_mask);
-				merged_mask &= ~(1u << bit);
-#ifdef USE_SUBGROUPS
-				if (((1u << bit) & mask) == 0) { //do not process if not originally here
-					continue;
-				}
-#endif
-				uint light_index = 32 * i + bit;
-
-				if (!bool(omni_lights.data[light_index].mask & instances.data[instance_index].layer_mask)) {
-					continue; //not masked
-				}
-
-				if (omni_lights.data[light_index].bake_mode == LIGHT_BAKE_STATIC && bool(instances.data[instance_index].flags & INSTANCE_FLAGS_USE_LIGHTMAP)) {
-					continue; // Statically baked light and object uses lightmap, skip
-				}
-
-				light_process_omni(light_index, vertex, view, normal, vertex_ddx, vertex_ddy, orms, 1.0,
-						diffuse_light_interp.rgb, specular_light_interp.rgb);
+			if (light_index == 0xFF) {
+				break;
 			}
+			if (!bool(omni_lights.data[light_index].mask & instances.data[instance_index].layer_mask)) {
+				continue; //not masked
+			}
+
+			if (omni_lights.data[light_index].bake_mode == LIGHT_BAKE_STATIC && bool(instances.data[instance_index].flags & INSTANCE_FLAGS_USE_LIGHTMAP)) {
+				continue; // Statically baked light and object uses lightmap, skip
+			}
+
+			light_process_omni(light_index, vertex, view, normal, vertex_ddx, vertex_ddy, orms, 1.0,
+					diffuse_light_interp.rgb, specular_light_interp.rgb);
 		}
 	}
 
 	{ //spot lights
+		for (uint i = 0; i < 8; i++) {
+			uint light_index = 32 * i & 0xFF;
 
-		uint cluster_spot_offset = cluster_offset + implementation_data.cluster_type_size;
-
-		uint item_min;
-		uint item_max;
-		uint item_from;
-		uint item_to;
-
-		cluster_get_item_range(cluster_spot_offset + implementation_data.max_cluster_element_count_div_32 + cluster_z, item_min, item_max, item_from, item_to);
-
-#ifdef USE_SUBGROUPS
-		item_from = subgroupBroadcastFirst(subgroupMin(item_from));
-		item_to = subgroupBroadcastFirst(subgroupMax(item_to));
-#endif
-
-		for (uint i = item_from; i < item_to; i++) {
-			uint mask = cluster_buffer.data[cluster_spot_offset + i];
-			mask &= cluster_get_range_clip_mask(i, item_min, item_max);
-#ifdef USE_SUBGROUPS
-			uint merged_mask = subgroupBroadcastFirst(subgroupOr(mask));
-#else
-			uint merged_mask = mask;
-#endif
-
-			while (merged_mask != 0) {
-				uint bit = findMSB(merged_mask);
-				merged_mask &= ~(1u << bit);
-#ifdef USE_SUBGROUPS
-				if (((1u << bit) & mask) == 0) { //do not process if not originally here
-					continue;
-				}
-#endif
-
-				uint light_index = 32 * i + bit;
-
-				if (!bool(spot_lights.data[light_index].mask & instances.data[instance_index].layer_mask)) {
-					continue; //not masked
-				}
-
-				if (spot_lights.data[light_index].bake_mode == LIGHT_BAKE_STATIC && bool(instances.data[instance_index].flags & INSTANCE_FLAGS_USE_LIGHTMAP)) {
-					continue; // Statically baked light and object uses lightmap, skip
-				}
-
-				light_process_spot(light_index, vertex, view, normal, vertex_ddx, vertex_ddy, orms, 1.0,
-						diffuse_light_interp.rgb, specular_light_interp.rgb);
+			if (light_index == 0xFF) {
+				break;
 			}
+
+			if (!bool(spot_lights.data[light_index].mask & instances.data[instance_index].layer_mask)) {
+				continue; //not masked
+			}
+
+			if (spot_lights.data[light_index].bake_mode == LIGHT_BAKE_STATIC && bool(instances.data[instance_index].flags & INSTANCE_FLAGS_USE_LIGHTMAP)) {
+				continue; // Statically baked light and object uses lightmap, skip
+			}
+
+			light_process_spot(light_index, vertex, view, normal, vertex_ddx, vertex_ddy, orms, 1.0,
+					diffuse_light_interp.rgb, specular_light_interp.rgb);
 		}
 	}
 
