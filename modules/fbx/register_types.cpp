@@ -95,6 +95,5 @@ void uninitialize_fbx_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	// TODO: 20240118 // fire
 	FBXDocument::unregister_all_gltf_document_extensions();
 }
