@@ -236,6 +236,7 @@ void ScriptTextEditor::_set_theme_for_script() {
 	}
 
 	text_edit->clear_comment_delimiters();
+	text_edit->clear_doc_comment_delimiters();
 
 	List<String> comments;
 	script->get_language()->get_comment_delimiters(&comments);
