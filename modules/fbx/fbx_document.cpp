@@ -1075,12 +1075,8 @@ Error FBXDocument::_parse_images(Ref<FBXState> p_state, const String &p_base_pat
 			memcpy(data.ptrw(), fbx_texture_file.content.data, fbx_texture_file.content.size);
 		} else {
 			String base_dir = p_state->get_base_path();
-			String tex_path = _get_texture_path(base_dir, path);
-			if (
-					tex_path.get_extension() != "png" &&
-					tex_path.get_extension() != "jpeg" &&
-					tex_path.get_extension() != "tga") {
-				Ref<Texture2D> texture = ResourceLoader::load(tex_path);
+			if (!FileAccess::exists(_get_texture_path(base_dir, path))) {
+				Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path));
 				if (texture.is_valid()) {
 					p_state->images.push_back(texture);
 					p_state->source_images.push_back(texture->get_image());
