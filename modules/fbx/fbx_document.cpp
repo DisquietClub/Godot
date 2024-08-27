@@ -1075,13 +1075,13 @@ Error FBXDocument::_parse_images(Ref<FBXState> p_state, const String &p_base_pat
 			data.resize(int(fbx_texture_file.content.size));
 			memcpy(data.ptrw(), fbx_texture_file.content.data, fbx_texture_file.content.size);
 		} else {
-			String base_dir = p_state->get_base_path();
-			Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path), "Texture2D");
-			if (texture.is_valid()) {
-				p_state->images.push_back(texture);
-				p_state->source_images.push_back(texture->get_image());
-				continue;
-			}
+			//String base_dir = p_state->get_base_path();
+			//Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path), "Texture2D");
+			//if (texture.is_valid()) {
+			//	p_state->images.push_back(texture);
+			//	p_state->source_images.push_back(texture->get_image());
+			//	continue;
+			//}
 			// Fallback to loading as byte array.
 			data = FileAccess::get_file_as_bytes(path);
 			if (data.size() == 0) {
@@ -2136,6 +2136,9 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 		root = root->get_owner();
 	}
 	ERR_FAIL_NULL_V(root, nullptr);
+	if (root->get_name() == StringName()) {
+		root->set_name(state->get_scene_name());
+	}
 	_process_mesh_instances(state, root);
 	if (state->get_create_animations() && state->animations.size()) {
 		AnimationPlayer *ap = memnew(AnimationPlayer);
@@ -2145,22 +2148,22 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 			_import_animation(state, ap, i, p_trimming, p_remove_immutable_tracks);
 		}
 	}
-	//for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
-	//	ERR_CONTINUE(!E.value);
-	//	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
-	//		ERR_CONTINUE(ext.is_null());
-	//		Dictionary node_json;
-	//		if (state->json.has("nodes")) {
-	//			Array nodes = state->json["nodes"];
-	//			if (0 <= E.key && E.key < nodes.size()) {
-	//				node_json = nodes[E.key];
-	//			}
-	//		}
-	//		Ref<GLTFNode> gltf_node = state->nodes[E.key];
-	//		Error err = ext->import_node(p_state, gltf_node, node_json, E.value);
-	//		ERR_CONTINUE(err != OK);
-	//	}
-	//}
+	for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
+		ERR_CONTINUE(!E.value);
+		for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+			ERR_CONTINUE(ext.is_null());
+			Dictionary node_json;
+			if (state->json.has("nodes")) {
+				Array nodes = state->json["nodes"];
+				if (0 <= E.key && E.key < nodes.size()) {
+					node_json = nodes[E.key];
+				}
+			}
+			Ref<GLTFNode> gltf_node = state->nodes[E.key];
+			Error err = ext->import_node(p_state, gltf_node, node_json, E.value);
+			ERR_CONTINUE(err != OK);
+		}
+	}
 	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
 		ERR_CONTINUE(ext.is_null());
 		Error err = ext->import_post(p_state, root);
