@@ -346,12 +346,11 @@ Error FBXDocument::_parse_nodes(Ref<FBXState> p_state) {
 		node.instantiate();
 
 		node->height = int(fbx_node->node_depth);
-
-		if (fbx_node->name.length > 0) {
+		if (fbx_node->is_root) {
+			node->set_name("RootNode");
+		} else if (fbx_node->name.length > 0) {
 			node->set_name(_as_string(fbx_node->name));
 			node->set_original_name(node->get_name());
-		} else if (fbx_node->is_root) {
-			node->set_name("RootNode");
 		}
 		if (fbx_node->camera) {
 			node->camera = fbx_node->camera->typed_id;
@@ -1075,13 +1074,19 @@ Error FBXDocument::_parse_images(Ref<FBXState> p_state, const String &p_base_pat
 			data.resize(int(fbx_texture_file.content.size));
 			memcpy(data.ptrw(), fbx_texture_file.content.data, fbx_texture_file.content.size);
 		} else {
-			//String base_dir = p_state->get_base_path();
-			//Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path), "Texture2D");
-			//if (texture.is_valid()) {
-			//	p_state->images.push_back(texture);
-			//	p_state->source_images.push_back(texture->get_image());
-			//	continue;
-			//}
+			String base_dir = p_state->get_base_path();
+			String tex_path = _get_texture_path(base_dir, path);
+			if (
+					tex_path.get_extension() != "png" &&
+					tex_path.get_extension() != "jpeg" &&
+					tex_path.get_extension() != "tga") {
+				Ref<Texture2D> texture = ResourceLoader::load(tex_path);
+				if (texture.is_valid()) {
+					p_state->images.push_back(texture);
+					p_state->source_images.push_back(texture->get_image());
+					continue;
+				}
+			}
 			// Fallback to loading as byte array.
 			data = FileAccess::get_file_as_bytes(path);
 			if (data.size() == 0) {
@@ -2136,9 +2141,6 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 		root = root->get_owner();
 	}
 	ERR_FAIL_NULL_V(root, nullptr);
-	if (root->get_name() == StringName()) {
-		root->set_name(state->get_scene_name());
-	}
 	_process_mesh_instances(state, root);
 	if (state->get_create_animations() && state->animations.size()) {
 		AnimationPlayer *ap = memnew(AnimationPlayer);
