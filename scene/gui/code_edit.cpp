@@ -1876,7 +1876,13 @@ TypedArray<String> CodeEdit::get_comment_delimiters() const {
 }
 
 int CodeEdit::is_in_comment(int p_line, int p_column) const {
-	return _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+	const int is_in_comment_delimiter = _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+
+	if (is_in_comment_delimiter != -1) {
+		return is_in_comment_delimiter;
+	}
+
+	return _is_in_delimiter(p_line, p_column, TYPE_DOC_COMMENT);
 }
 
 // Doc comments
