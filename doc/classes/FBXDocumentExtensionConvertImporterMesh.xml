@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="FBXDocumentExtensionConvertImporterMesh" inherits="GLTFDocumentExtension" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
-	a Class that converts ImporterMeshes into Meshinstances for the fbx runtime loader
+		a Class that converts ImporterMeshes into Meshinstances for the fbx runtime loader
 	</brief_description>
 	<description>
 	</description>
