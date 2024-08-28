@@ -39,12 +39,12 @@ class HTTPClientManualMock : public HTTPClient {
 public:
 	static HTTPClientManualMock *current_instance;
 
-	static HTTPClient *_create_func() {
-		current_instance = memnew(HTTPClientManualMock);
+	static HTTPClient *_create_func(bool p_notify_postinitialize = true) {
+		current_instance = static_cast<HTTPClientManualMock *>(ClassDB::creator<HTTPClientManualMock>(p_notify_postinitialize));
 		return current_instance;
 	}
 
-	static HTTPClient *(*_old_create)();
+	static HTTPClient *(*_old_create)(bool);
 	static void make_current() {
 		_old_create = HTTPClient::_create;
 		HTTPClient::_create = _create_func;
