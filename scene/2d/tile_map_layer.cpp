@@ -1670,18 +1670,23 @@ void TileMapLayer::_internal_update(bool p_force_cleanup) {
 		dirty.flags[i] = false;
 	}
 
-	// List the cells to delete definitely, and all dirty cell's positions to notify script of cell updates.
+	// List the cells to delete definitely.
 	Vector<Vector2i> to_delete;
-	TypedArray<Vector2i> dirty_cell_positions;
-	bool script_update_callback = cells_initialized && !p_force_cleanup && dirty.cell_list.first() && GDVIRTUAL_IS_OVERRIDDEN(_update_cells);
 	for (SelfList<CellData> *cell_data_list_element = dirty.cell_list.first(); cell_data_list_element; cell_data_list_element = cell_data_list_element->next()) {
 		CellData &cell_data = *cell_data_list_element->self();
-		if (script_update_callback) {
-			dirty_cell_positions.push_back(cell_data.coords);
-		}
 		// Select the cell from tile_map if it is invalid.
 		if (cell_data.cell.source_id == TileSet::INVALID_SOURCE) {
 			to_delete.push_back(cell_data.coords);
+		}
+	}
+
+	// List all the dirty cell's positions to notify script of cell updates.
+	TypedArray<Vector2i> dirty_cell_positions;
+	bool script_update_callback = cells_initialized && !p_force_cleanup && dirty.cell_list.first() && GDVIRTUAL_IS_OVERRIDDEN(_update_cells);
+	if (script_update_callback) {
+		for (SelfList<CellData> *cell_data_list_element = dirty.cell_list.first(); cell_data_list_element; cell_data_list_element = cell_data_list_element->next()) {
+			CellData &cell_data = *cell_data_list_element->self();
+			dirty_cell_positions.push_back(cell_data.coords);
 		}
 	}
 
