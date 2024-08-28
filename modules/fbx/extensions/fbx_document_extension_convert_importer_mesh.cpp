@@ -52,7 +52,7 @@ Error FBXDocumentExtensionConvertImporterMesh::import_post(Ref<GLTFState> p_stat
 	while (!queue.is_empty()) {
 		List<Node *>::Element *E = queue.front();
 		Node *node = E->get();
-		ImporterMeshInstance3D *mesh_3d = cast_to<ImporterMeshInstance3D>(node);
+		ImporterMeshInstance3D *mesh_3d = Object::cast_to<ImporterMeshInstance3D>(node);
 		if (mesh_3d) {
 			MeshInstance3D *mesh_instance_node_3d = memnew(MeshInstance3D);
 			Ref<ImporterMesh> mesh = mesh_3d->get_mesh();
