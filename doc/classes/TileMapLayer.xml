@@ -26,8 +26,8 @@
 			<return type="void" />
 			<param index="0" name="coords" type="Vector2i[]" />
 			<description>
-				Called when the cells of this [TileMapLayer] are changed. [param coords] contains the position of all the changed cells.
-				[b]Note:[/b] This method is called when this [TileMapLayer] updates. Modifications to the [TileMapLayer]'s cells made inside this function will be processed during the next update (at the end of the next frame if [method update_internals] is not called).
+				Called with the cells of this [TileMapLayer] that are queued for an internal update. Such update might be a caused by a change in the [TileSet] (causes all cells to be queued for update) or from a call to [method set_cell]. [param coords] contains the position of all the modified cells.
+				[b]Note:[/b] This method is called when this [TileMapLayer] updates. Modifications to the [TileMapLayer]'s cells made inside this function will be processed during the next update (at the end of the next frame if [method update_internals] is not called earlier).
 			</description>
 		</method>
 		<method name="_use_tile_data_runtime_update" qualifiers="virtual">
