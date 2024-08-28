@@ -659,6 +659,7 @@ public:
 			elements = nullptr;
 		}
 		capacity = INITIAL_CAPACITY - 1;
+		num_elements = 0;
 	}
 
 	~AHashMap() {
