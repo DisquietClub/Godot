@@ -1083,7 +1083,7 @@ Error FBXDocument::_parse_images(Ref<FBXState> p_state, const String &p_base_pat
 					continue;
 				}
 			}
-			// This aint a Fallback anymore
+			// This isn't a fallback anymore.
 			data = FileAccess::get_file_as_bytes(path);
 			if (data.size() == 0) {
 				WARN_PRINT(vformat("FBX: Image index '%d' couldn't be loaded from path: %s because there was no data to load. Skipping it.", texture_i, path));
