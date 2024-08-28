@@ -1696,7 +1696,7 @@ void TileMapLayer::_internal_update(bool p_force_cleanup) {
 	pending_update = false;
 	cells_initialized = true;
 
-	// Script callback for updated cells
+	// Script callback for updated cells.
 	if (script_update_callback) {
 		GDVIRTUAL_CALL(_update_cells, dirty_cell_positions);
 	}
