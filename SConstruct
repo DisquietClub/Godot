@@ -791,6 +791,8 @@ else:
     # Note that this is still not complete conformance, as certain Windows-related headers
     # don't compile under complete conformance.
     env.Prepend(CCFLAGS=["/permissive-"])
+    # Allow use of `__cplusplus` macro to determine C++ standard universally.
+    env.Prepend(CXXFLAGS=["/Zc:__cplusplus"])
 
 # Disable exception handling. Godot doesn't use exceptions anywhere, and this
 # saves around 20% of binary size and very significant build time (GH-80513).
@@ -1032,7 +1034,9 @@ if env["vsproj"]:
 if env["compiledb"]:
     if env.scons_version < (4, 0, 0):
         # Generating the compilation DB (`compile_commands.json`) requires SCons 4.0.0 or later.
-        print_error("The `compiledb=yes` option requires SCons 4.0 or later, but your version is %s." % scons_raw_version)
+        print_error(
+            "The `compiledb=yes` option requires SCons 4.0 or later, but your version is %s." % scons_raw_version
+        )
         Exit(255)
 
     env.Tool("compilation_db")
