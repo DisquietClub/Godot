@@ -402,7 +402,7 @@ class VBoxContainer;
 
 class Tree : public Control {
 	GDCLASS(Tree, Control);
-
+	
 public:
 	enum SelectMode {
 		SELECT_SINGLE,
@@ -809,6 +809,7 @@ public:
 
 	Size2 get_minimum_size() const override;
 
+	LineEdit *get_line_editor() const;
 	Tree();
 	~Tree();
 };
