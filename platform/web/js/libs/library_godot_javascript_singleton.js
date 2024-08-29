@@ -127,6 +127,16 @@ const GodotJSWrapper = {
 			GodotRuntime.setHeapValue(p_exchange, id, 'i64');
 			return 24; // OBJECT
 		},
+
+		isBuffer: function (obj) {
+			switch (typeof obj) {
+			case 'object':
+				break;
+			default:
+				return false;
+			}
+			return obj instanceof ArrayBuffer || ArrayBuffer.isView(obj);
+		},
 	},
 
 	godot_js_wrapper_interface_get__proxy: 'sync',
@@ -302,6 +312,34 @@ const GodotJSWrapper = {
 			GodotRuntime.error(`Error calling constructor ${name} with args:`, args, 'error:', e);
 			return -1;
 		}
+	},
+
+	godot_js_wrapper_object_isbuffer__proxy: 'sync',
+	godot_js_wrapper_object_isbuffer__sig: 'ii',
+	godot_js_wrapper_object_isbuffer: function (p_id) {
+		const obj = GodotJSWrapper.get_proxied_value(p_id);
+		return GodotJSWrapper.isBuffer(obj)
+			? 1
+			: 0;
+	},
+
+	godot_js_wrapper_object_transferbuffer__proxy: 'sync',
+	godot_js_wrapper_object_transferbuffer__sig: 'viiii',
+	godot_js_wrapper_object_transferbuffer: function (p_id, p_byte_arr, p_byte_arr_write, p_callback) {
+		let obj = GodotJSWrapper.get_proxied_value(p_id);
+		if (!GodotJSWrapper.isBuffer(obj)) {
+			return;
+		}
+
+		if (ArrayBuffer.isView(obj) && !(obj instanceof Uint8Array)) {
+			obj = new Uint8Array(obj.buffer);
+		} else if (obj instanceof ArrayBuffer) {
+			obj = new Uint8Array(obj);
+		}
+
+		const resizePackedByteArrayAndOpenWrite = GodotRuntime.get_func(p_callback);
+		const bytesPtr = resizePackedByteArrayAndOpenWrite(p_byte_arr, p_byte_arr_write, obj.length);
+		HEAPU8.set(obj, bytesPtr);
 	},
 };
 
