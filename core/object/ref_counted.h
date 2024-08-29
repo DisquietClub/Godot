@@ -86,6 +86,9 @@ public:
 	_FORCE_INLINE_ bool operator!=(const T *p_ptr) const {
 		return reference != p_ptr;
 	}
+	// Delete these to prevent raw comparisons with `nullptr`.
+	bool operator==(std::nullptr_t) const = delete;
+	bool operator!=(std::nullptr_t) const = delete;
 
 	_FORCE_INLINE_ bool operator<(const Ref<T> &p_r) const {
 		return reference < p_r.reference;
