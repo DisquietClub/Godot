@@ -667,4 +667,10 @@ public:
 	}
 };
 
+extern template class AHashMap<int, int>;
+extern template class AHashMap<String, int>;
+extern template class AHashMap<StringName, StringName>;
+extern template class AHashMap<StringName, Variant>;
+extern template class AHashMap<StringName, int>;
+
 #endif // A_HASH_MAP_H
