@@ -45,10 +45,12 @@
 #include "editor/editor_resource_preview.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "editor/gui/editor_dir_dialog.h"
 #include "editor/gui/editor_scene_tabs.h"
 #include "editor/import/3d/scene_import_settings.h"
 #include "editor/import_dock.h"
+#include "editor/plugins/editor_resource_conversion_plugin.h"
 #include "editor/plugins/editor_resource_tooltip_plugins.h"
 #include "editor/scene_create_dialog.h"
 #include "editor/scene_tree_dock.h"
@@ -1178,6 +1180,54 @@ void FileSystemDock::_update_file_list(bool p_keep_selection) {
 	}
 }
 
+HashSet<String> FileSystemDock::_get_valid_conversions_for_file_paths(const Vector<String> &p_paths) {
+	HashSet<String> all_valid_conversion_to_targets;
+	for (int i = 0; i < p_paths.size(); i++) {
+		String fpath = p_paths[i];
+
+		if (fpath.is_empty() || fpath == "res://" || !FileAccess::exists(fpath)) {
+			return HashSet<String>();
+		}
+
+		if (!FileAccess::exists(fpath + ".import")) {
+			Vector<Ref<EditorResourceConversionPlugin>> conversions = EditorNode::get_singleton()->find_resource_conversion_plugin_for_type_name(EditorFileSystem::get_singleton()->get_file_type(fpath));
+
+			if (!conversions.is_empty()) {
+				// Get a list of all potentional conversion-to targets.
+				HashSet<String> current_valid_conversion_to_targets;
+				for (const Ref<EditorResourceConversionPlugin> &E : conversions) {
+					const String what = E->converts_to();
+					current_valid_conversion_to_targets.insert(what);
+				}
+
+				if (all_valid_conversion_to_targets.is_empty()) {
+					// If we have no existing valid conversions, this is the first one, so copy them directly.
+					all_valid_conversion_to_targets = current_valid_conversion_to_targets;
+				} else {
+					// Check existing conversion targets and remove any which are not in the current list.
+					for (const String &S : all_valid_conversion_to_targets) {
+						if (!current_valid_conversion_to_targets.has(S)) {
+							all_valid_conversion_to_targets.erase(S);
+						}
+					}
+					// We have no more remaining valid conversions, so return an empty list.
+					if (all_valid_conversion_to_targets.is_empty()) {
+						return HashSet<String>();
+					}
+				}
+			} else {
+				// This resource can't convert to anything, so return an empty list.
+				return HashSet<String>();
+			}
+		} else {
+			// One of the resources was imported, so return an empty list.
+			return HashSet<String>();
+		}
+	}
+
+	return all_valid_conversion_to_targets;
+}
+
 void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorites) {
 	String fpath = p_path;
 	if (fpath.ends_with("/")) {
@@ -1898,6 +1948,56 @@ void FileSystemDock::_overwrite_dialog_action(bool p_overwrite) {
 	_move_operation_confirm(to_move_path, to_move_or_copy, p_overwrite ? OVERWRITE_REPLACE : OVERWRITE_RENAME);
 }
 
+void FileSystemDock::_convert_dialog_action() {
+	HashSet<String> valid_conversion_targets = _get_valid_conversions_for_file_paths(to_convert);
+
+	Vector<Ref<Resource>> selected_resources;
+	for (const String &S : to_convert) {
+		Ref<Resource> res = ResourceLoader::load(S);
+		ERR_FAIL_COND(res.is_null());
+		selected_resources.push_back(res);
+	}
+
+	Vector<Ref<Resource>> converted_resources;
+	HashSet<Ref<Resource>> resources_to_erase_history_for;
+	for (Ref<Resource> res : selected_resources) {
+		Vector<Ref<EditorResourceConversionPlugin>> conversions = EditorNode::get_singleton()->find_resource_conversion_plugin_for_resource(res);
+		for (const Ref<EditorResourceConversionPlugin> &E : conversions) {
+			int conversion_id = 0;
+			for (const String &E2 : valid_conversion_targets) {
+				if (conversion_id == selected_conversion_id && E->converts_to() == E2) {
+					Ref<Resource> converted_res = E->convert(res);
+					ERR_FAIL_COND(res.is_null());
+					converted_resources.push_back(converted_res);
+					resources_to_erase_history_for.insert(res);
+					break;
+				}
+				conversion_id++;
+			}
+		}
+	}
+
+	// Clear history for the objects being replaced.
+	for (Ref<Resource> res : resources_to_erase_history_for) {
+		EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
+		undo_redo->clear_history(true, undo_redo->get_history_id_for_object(res.ptr()));
+	}
+
+	// Updates all the resources existing as node properties.
+	EditorNode::get_singleton()->replace_resources_in_scenes(selected_resources, converted_resources);
+
+	// Overwrite the old resources.
+	for (int i = 0; i < converted_resources.size(); i++) {
+		Ref<Resource> original_resource = selected_resources.get(i);
+		Ref<Resource> new_resource = converted_resources.get(i);
+
+		// Overwrite the path.
+		new_resource->set_path(original_resource->get_path(), true);
+
+		ResourceSaver::save(converted_resources[i], to_convert[i]);
+	};
+}
+
 Vector<String> FileSystemDock::_check_existing() {
 	Vector<String> conflicting_items;
 	for (const FileOrFolder &item : to_move) {
@@ -2112,6 +2212,27 @@ void FileSystemDock::_file_list_rmb_option(int p_option) {
 	Vector<String> selected;
 	for (int i = 0; i < selected_id.size(); i++) {
 		selected.push_back(files->get_item_metadata(selected_id[i]));
+	}
+	_file_option(p_option, selected);
+}
+
+void FileSystemDock::_generic_rmb_option_selected(int p_option) {
+	// Used for submenu commands where we don't know whether we're
+	// calling from the file_list_rmb menu or the _tree_rmb option.
+	Vector<String> selected;
+
+	if (files->has_focus()) {
+		Vector<int> files_selected_ids = files->get_selected_items();
+		for (int i = 0; i < files_selected_ids.size(); i++) {
+			selected.push_back(files->get_item_metadata(files_selected_ids[i]));
+		}
+	} else {
+		TreeItem *tree_selected = tree->get_root();
+		tree_selected = tree->get_next_selected(tree_selected);
+		while (tree_selected) {
+			selected.push_back(tree_selected->get_metadata(0));
+			tree_selected = tree->get_next_selected(tree_selected);
+		}
 	}
 	_file_option(p_option, selected);
 }
@@ -2556,6 +2677,29 @@ void FileSystemDock::_file_option(int p_option, const Vector<String> &p_selected
 			String dir = ProjectSettings::get_singleton()->globalize_path(fpath);
 			ScriptEditor::get_singleton()->open_text_file_create_dialog(dir);
 		} break;
+		default: {
+			// Resource conversion commands:
+			if (p_option >= CONVERT_BASE_ID) {
+				HashSet<String> valid_conversion_targets = _get_valid_conversions_for_file_paths(p_selected);
+				selected_conversion_id = p_option - CONVERT_BASE_ID;
+				ERR_FAIL_COND(selected_conversion_id >= (int)valid_conversion_targets.size());
+
+				to_convert.clear();
+				for (const String &S : p_selected) {
+					to_convert.push_back(S);
+				}
+
+				int conversion_id = 0;
+				for (const String &E : valid_conversion_targets) {
+					if (conversion_id == selected_conversion_id) {
+						conversion_dialog->set_text(vformat(TTR("Do you wish to convert these files to %s? (This operation cannot be undone!)"), E));
+						conversion_dialog->popup_centered();
+						break;
+					}
+					conversion_id++;
+				}
+			}
+		}
 	}
 }
 
@@ -3168,7 +3312,7 @@ void FileSystemDock::_file_and_folders_fill_popup(PopupMenu *p_popup, const Vect
 
 	if (p_paths.size() == 1 && p_display_path_dependent_options) {
 		PopupMenu *new_menu = memnew(PopupMenu);
-		new_menu->connect(SceneStringName(id_pressed), callable_mp(this, &FileSystemDock::_tree_rmb_option));
+		new_menu->connect(SceneStringName(id_pressed), callable_mp(this, &FileSystemDock::_generic_rmb_option_selected));
 
 		p_popup->add_submenu_node_item(TTR("Create New"), new_menu, FILE_NEW);
 		p_popup->set_item_icon(p_popup->get_item_index(FILE_NEW), get_editor_theme_icon(SNAME("Add")));
@@ -3236,6 +3380,48 @@ void FileSystemDock::_file_and_folders_fill_popup(PopupMenu *p_popup, const Vect
 		}
 		if (!all_not_favorites) {
 			p_popup->add_icon_item(get_editor_theme_icon(SNAME("NonFavorite")), TTR("Remove from Favorites"), FILE_REMOVE_FAVORITE);
+		}
+
+		if (p_paths.size() > 1 || p_paths[0] != "res://") {
+			HashSet<String> all_valid_conversion_to_targets = _get_valid_conversions_for_file_paths(p_paths);
+
+			int relative_id = 0;
+			if (all_valid_conversion_to_targets.size()) {
+				p_popup->add_separator();
+				// If we have more the one convert, collapse it into a submenu.
+				if (all_valid_conversion_to_targets.size() > 1) {
+					PopupMenu *new_menu = memnew(PopupMenu);
+					new_menu->set_name("Convert to");
+					new_menu->connect("id_pressed", callable_mp(this, &FileSystemDock::_generic_rmb_option_selected));
+
+					p_popup->add_child(new_menu);
+					p_popup->add_submenu_item(TTR("Convert to..."), "Convert to", FILE_NEW);
+
+					for (const String &E : all_valid_conversion_to_targets) {
+						Ref<Texture2D> icon;
+						if (has_theme_icon(E, SNAME("EditorIcons"))) {
+							icon = get_editor_theme_icon(E);
+						} else {
+							icon = get_theme_icon(E, SNAME("Resource"));
+						}
+
+						new_menu->add_icon_item(icon, vformat(TTR("%s"), E), CONVERT_BASE_ID + relative_id);
+					}
+
+					relative_id++;
+				} else {
+					for (const String &E : all_valid_conversion_to_targets) {
+						Ref<Texture2D> icon;
+						if (has_theme_icon(E, SNAME("EditorIcons"))) {
+							icon = get_editor_theme_icon(E);
+						} else {
+							icon = get_theme_icon(E, SNAME("Resource"));
+						}
+
+						p_popup->add_icon_item(icon, vformat(TTR("Convert to %s"), E), CONVERT_BASE_ID + relative_id);
+					}
+				}
+			}
 		}
 
 		{
@@ -4150,6 +4336,11 @@ FileSystemDock::FileSystemDock() {
 	add_child(new_resource_dialog);
 	new_resource_dialog->set_base_type("Resource");
 	new_resource_dialog->connect("create", callable_mp(this, &FileSystemDock::_resource_created));
+
+	conversion_dialog = memnew(ConfirmationDialog);
+	add_child(conversion_dialog);
+	conversion_dialog->set_ok_button_text(TTR("Convert"));
+	conversion_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_convert_dialog_action));
 
 	uncollapsed_paths_before_search = Vector<String>();
 
