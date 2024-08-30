@@ -977,7 +977,7 @@ void Viewport::update_canvas_items() {
 		return;
 	}
 
-	if (is_embedding_subwindows()) {
+	if (has_subwindows()) {
 		for (Viewport::SubWindow w : gui.sub_windows) {
 			if (w.window && !w.pending_window_update) {
 				w.pending_window_update = true;
@@ -2005,7 +2005,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			Viewport *embedder = nullptr;
 			Vector2 viewport_pos;
 
-			if (is_embedding_subwindows()) {
+			if (has_subwindows()) {
 				embedder = this;
 				viewport_pos = mpos;
 			} else {
@@ -3006,7 +3006,7 @@ void Viewport::_update_mouse_over() {
 		return;
 	}
 
-	if (get_tree()->get_root()->is_embedding_subwindows() || is_sub_viewport()) {
+	if (get_tree()->get_root()->has_subwindows() || is_sub_viewport()) {
 		// Use embedder logic for calculating mouse position.
 		_update_mouse_over(gui.last_mouse_pos);
 	} else {
@@ -3025,7 +3025,7 @@ void Viewport::_update_mouse_over() {
 
 void Viewport::_update_mouse_over(Vector2 p_pos) {
 	// Look for embedded windows at mouse position.
-	if (is_embedding_subwindows()) {
+	if (has_subwindows()) {
 		for (int i = gui.sub_windows.size() - 1; i >= 0; i--) {
 			Window *sw = gui.sub_windows[i].window;
 			Rect2 swrect = Rect2(sw->get_position(), sw->get_size());
@@ -3249,7 +3249,7 @@ void Viewport::push_input(const Ref<InputEvent> &p_event, bool p_local_coords) {
 		_update_mouse_over();
 	}
 
-	if (is_embedding_subwindows() && _sub_windows_forward_input(ev)) {
+	if (has_subwindows() && _sub_windows_forward_input(ev)) {
 		set_input_as_handled();
 		return;
 	}
@@ -3828,7 +3828,7 @@ void Viewport::set_embedding_subwindows(bool p_embed) {
 				break;
 			}
 			vp = vp->get_parent()->get_viewport();
-			if (vp->is_embedding_subwindows()) {
+			if (vp->has_subwindows()) {
 				for (int i = 0; i < vp->gui.sub_windows.size(); i++) {
 					if (is_ancestor_of(vp->gui.sub_windows[i].window)) {
 						// Prevent change when this viewport has child windows that are displayed in an ancestor viewport.
@@ -3872,6 +3872,10 @@ void Viewport::set_embedding_subwindows(bool p_embed) {
 bool Viewport::is_embedding_subwindows() const {
 	ERR_READ_THREAD_GUARD_V(false);
 	return gui.embed_subwindows_hint;
+}
+
+bool Viewport::has_subwindows() const {
+	return gui.sub_windows.size() != 0;
 }
 
 TypedArray<Window> Viewport::get_embedded_subwindows() const {
@@ -5157,7 +5161,7 @@ Transform2D SubViewport::get_screen_transform_internal(bool p_absolute_position)
 
 Transform2D SubViewport::get_popup_base_transform() const {
 	ERR_READ_THREAD_GUARD_V(Transform2D());
-	if (is_embedding_subwindows()) {
+	if (has_subwindows()) {
 		return Transform2D();
 	}
 	SubViewportContainer *c = Object::cast_to<SubViewportContainer>(get_parent());
