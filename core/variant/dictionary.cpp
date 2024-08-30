@@ -159,6 +159,11 @@ Variant Dictionary::get_or_add(const Variant &p_key, const Variant &p_default) {
 	return *result;
 }
 
+void Dictionary::set(const Variant &p_key, const Variant &p_value) {
+	ERR_FAIL_COND_MSG(_p->read_only, "Dictionary is in read-only state.");
+	operator[](p_key) = p_value;
+}
+
 int Dictionary::size() const {
 	return _p->variant_map.size();
 }
