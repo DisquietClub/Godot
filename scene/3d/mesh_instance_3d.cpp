@@ -359,13 +359,13 @@ void MeshInstance3D::set_surface_override_material(int p_surface, const Ref<Mate
 	}
 }
 
-Ref<Material> MeshInstance3D::get_surface_override_material(int p_surface) const {
+Ref<Material> MeshInstance3D::get_surface_override_material(int p_surface = 0) const {
 	ERR_FAIL_INDEX_V(p_surface, surface_override_materials.size(), Ref<Material>());
 
 	return surface_override_materials[p_surface];
 }
 
-Ref<Material> MeshInstance3D::get_active_material(int p_surface) const {
+Ref<Material> MeshInstance3D::get_active_material(int p_surface = 0) const {
 	Ref<Material> mat_override = get_material_override();
 	if (mat_override.is_valid()) {
 		return mat_override;
