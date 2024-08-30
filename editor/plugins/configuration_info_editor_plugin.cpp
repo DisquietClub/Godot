@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_configuration_info_editor_plugin.cpp                          */
+/*  configuration_info_editor_plugin.cpp                                  */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,26 +28,26 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "resource_configuration_info_editor_plugin.h"
+#include "configuration_info_editor_plugin.h"
 
 #include "editor/editor_configuration_info.h"
 #include "scene/gui/grid_container.h"
 
 // Inspector controls.
 
-void ResourceConfigurationInfoList::_update_content() {
-	if (!resource) {
+void ConfigurationInfoList::_update_content() {
+	if (!object) {
 		hide();
 		return;
 	}
 
-	Array config_info_dicts = EditorConfigurationInfo::get_configuration_info_dicts(resource);
+	Array config_info_dicts = EditorConfigurationInfo::get_configuration_info_dicts(object);
 	if (config_info_dicts.is_empty()) {
 		hide();
 		return;
 	}
 
-	title_label->set_text(vformat(TTRN("%d Resource Configuration Info", "%d Resource Configuration Infos", config_info_dicts.size()), config_info_dicts.size()));
+	title_label->set_text(vformat(TTRN("%d Configuration Info", "%d Configuration Infos", config_info_dicts.size()), config_info_dicts.size()));
 
 	config_info_list->clear();
 	for (int i = 0; i < config_info_dicts.size(); i++) {
@@ -61,29 +61,29 @@ void ResourceConfigurationInfoList::_update_content() {
 	show();
 }
 
-void ResourceConfigurationInfoList::_update_toggler() {
+void ConfigurationInfoList::_update_toggler() {
 	Ref<Texture2D> arrow;
 	if (config_info_list->is_visible()) {
 		arrow = get_theme_icon(SNAME("arrow"), SNAME("Tree"));
-		set_tooltip_text(TTR("Collapse resource configuration info."));
+		set_tooltip_text(TTR("Collapse configuration info."));
 	} else {
 		if (is_layout_rtl()) {
 			arrow = get_theme_icon(SNAME("arrow_collapsed"), SNAME("Tree"));
 		} else {
 			arrow = get_theme_icon(SNAME("arrow_collapsed_mirrored"), SNAME("Tree"));
 		}
-		set_tooltip_text(TTR("Expand resource configuration info."));
+		set_tooltip_text(TTR("Expand configuration info."));
 	}
 
 	expand_icon->set_texture(arrow);
 }
 
-void ResourceConfigurationInfoList::set_resource(Resource *p_resource) {
-	resource = p_resource;
+void ConfigurationInfoList::set_object(Object *p_object) {
+	object = p_object;
 	_update_content();
 }
 
-void ResourceConfigurationInfoList::gui_input(const Ref<InputEvent> &p_event) {
+void ConfigurationInfoList::gui_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventMouseButton> mb = p_event;
 	if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 		bool state = !config_info_list->is_visible();
@@ -95,7 +95,7 @@ void ResourceConfigurationInfoList::gui_input(const Ref<InputEvent> &p_event) {
 	}
 }
 
-void ResourceConfigurationInfoList::_notification(int p_notification) {
+void ConfigurationInfoList::_notification(int p_notification) {
 	switch (p_notification) {
 		case NOTIFICATION_ENTER_TREE:
 		case NOTIFICATION_THEME_CHANGED:
@@ -105,7 +105,7 @@ void ResourceConfigurationInfoList::_notification(int p_notification) {
 	}
 }
 
-ResourceConfigurationInfoList::ResourceConfigurationInfoList() {
+ConfigurationInfoList::ConfigurationInfoList() {
 	set_mouse_filter(MOUSE_FILTER_STOP);
 	hide();
 
@@ -138,21 +138,20 @@ ResourceConfigurationInfoList::ResourceConfigurationInfoList() {
 	grid->add_child(list_filler_right);
 }
 
-bool EditorInspectorPluginResourceConfigurationInfo::can_handle(Object *p_object) {
-	return Object::cast_to<Resource>(p_object) != nullptr;
+bool EditorInspectorPluginConfigurationInfo::can_handle(Object *p_object) {
+	return Object::cast_to<Node>(p_object) != nullptr || Object::cast_to<Resource>(p_object) != nullptr;
 }
 
-void EditorInspectorPluginResourceConfigurationInfo::parse_begin(Object *p_object) {
-	Resource *resource = Object::cast_to<Resource>(p_object);
-	ResourceConfigurationInfoList *config_info_list = memnew(ResourceConfigurationInfoList);
-	config_info_list->set_resource(resource);
+void EditorInspectorPluginConfigurationInfo::parse_begin(Object *p_object) {
+	ConfigurationInfoList *config_info_list = memnew(ConfigurationInfoList);
+	config_info_list->set_object(p_object);
 	add_custom_control(config_info_list);
 }
 
 // Editor plugin.
 
-ResourceConfigurationInfoEditorPlugin::ResourceConfigurationInfoEditorPlugin() {
-	Ref<EditorInspectorPluginResourceConfigurationInfo> plugin;
+ConfigurationInfoEditorPlugin::ConfigurationInfoEditorPlugin() {
+	Ref<EditorInspectorPluginConfigurationInfo> plugin;
 	plugin.instantiate();
 	add_inspector_plugin(plugin);
 }

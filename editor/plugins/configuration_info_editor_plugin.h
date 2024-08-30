@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_configuration_info_editor_plugin.h                           */
+/*  configuration_info_editor_plugin.h                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RESOURCE_CONFIGURATION_INFO_EDITOR_PLUGIN_H
-#define RESOURCE_CONFIGURATION_INFO_EDITOR_PLUGIN_H
+#ifndef CONFIGURATION_INFO_EDITOR_PLUGIN_H
+#define CONFIGURATION_INFO_EDITOR_PLUGIN_H
 
 #include "editor/plugins/editor_plugin.h"
 
@@ -44,10 +44,10 @@
 class GridContainer;
 
 // Inspector controls.
-class ResourceConfigurationInfoList : public MarginContainer {
-	GDCLASS(ResourceConfigurationInfoList, MarginContainer);
+class ConfigurationInfoList : public MarginContainer {
+	GDCLASS(ConfigurationInfoList, MarginContainer);
 
-	Resource *resource = nullptr;
+	Object *object = nullptr;
 
 	PanelContainer *bg_panel = nullptr;
 	GridContainer *grid = nullptr;
@@ -64,13 +64,13 @@ protected:
 	void _notification(int p_notification);
 
 public:
-	void set_resource(Resource *p_resource);
+	void set_object(Object *p_object);
 
-	ResourceConfigurationInfoList();
+	ConfigurationInfoList();
 };
 
-class EditorInspectorPluginResourceConfigurationInfo : public EditorInspectorPlugin {
-	GDCLASS(EditorInspectorPluginResourceConfigurationInfo, EditorInspectorPlugin);
+class EditorInspectorPluginConfigurationInfo : public EditorInspectorPlugin {
+	GDCLASS(EditorInspectorPluginConfigurationInfo, EditorInspectorPlugin);
 
 public:
 	virtual bool can_handle(Object *p_object) override;
@@ -78,11 +78,11 @@ public:
 };
 
 // Editor plugin.
-class ResourceConfigurationInfoEditorPlugin : public EditorPlugin {
-	GDCLASS(ResourceConfigurationInfoEditorPlugin, EditorPlugin);
+class ConfigurationInfoEditorPlugin : public EditorPlugin {
+	GDCLASS(ConfigurationInfoEditorPlugin, EditorPlugin);
 
 public:
-	ResourceConfigurationInfoEditorPlugin();
+	ConfigurationInfoEditorPlugin();
 };
 
-#endif // RESOURCE_CONFIGURATION_INFO_EDITOR_PLUGIN_H
+#endif // CONFIGURATION_INFO_EDITOR_PLUGIN_H

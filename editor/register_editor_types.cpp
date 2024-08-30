@@ -75,6 +75,7 @@
 #include "editor/plugins/cast_2d_editor_plugin.h"
 #include "editor/plugins/collision_polygon_2d_editor_plugin.h"
 #include "editor/plugins/collision_shape_2d_editor_plugin.h"
+#include "editor/plugins/configuration_info_editor_plugin.h"
 #include "editor/plugins/control_editor_plugin.h"
 #include "editor/plugins/cpu_particles_2d_editor_plugin.h"
 #include "editor/plugins/cpu_particles_3d_editor_plugin.h"
@@ -109,7 +110,6 @@
 #include "editor/plugins/physical_bone_3d_editor_plugin.h"
 #include "editor/plugins/polygon_2d_editor_plugin.h"
 #include "editor/plugins/polygon_3d_editor_plugin.h"
-#include "editor/plugins/resource_configuration_info_editor_plugin.h"
 #include "editor/plugins/resource_preloader_editor_plugin.h"
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/plugins/shader_editor_plugin.h"
@@ -211,6 +211,7 @@ void register_editor_types() {
 	EditorPlugins::add_by_type<BitMapEditorPlugin>();
 	EditorPlugins::add_by_type<BoneMapEditorPlugin>();
 	EditorPlugins::add_by_type<Camera3DEditorPlugin>();
+	EditorPlugins::add_by_type<ConfigurationInfoEditorPlugin>();
 	EditorPlugins::add_by_type<ControlEditorPlugin>();
 	EditorPlugins::add_by_type<CPUParticles3DEditorPlugin>();
 	EditorPlugins::add_by_type<CurveEditorPlugin>();
@@ -233,7 +234,6 @@ void register_editor_types() {
 	EditorPlugins::add_by_type<Path3DEditorPlugin>();
 	EditorPlugins::add_by_type<PhysicalBone3DEditorPlugin>();
 	EditorPlugins::add_by_type<Polygon3DEditorPlugin>();
-	EditorPlugins::add_by_type<ResourceConfigurationInfoEditorPlugin>();
 	EditorPlugins::add_by_type<ResourcePreloaderEditorPlugin>();
 	EditorPlugins::add_by_type<ShaderEditorPlugin>();
 	EditorPlugins::add_by_type<ShaderFileEditorPlugin>();
