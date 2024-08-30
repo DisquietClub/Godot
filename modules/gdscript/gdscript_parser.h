@@ -562,6 +562,7 @@ public:
 				ENUM,
 				ENUM_VALUE, // For unnamed enums.
 				GROUP, // For member grouping.
+				TOOL_BUTTON,
 			};
 
 			Type type = UNDEFINED;
@@ -598,6 +599,7 @@ public:
 					case ENUM_VALUE:
 						return enum_value.identifier->name;
 					case GROUP:
+					case TOOL_BUTTON:
 						return annotation->export_info.name;
 				}
 				return "";
@@ -623,6 +625,8 @@ public:
 						return "enum value";
 					case GROUP:
 						return "group";
+					case TOOL_BUTTON:
+						return "tool button";
 				}
 				return "";
 			}
@@ -644,6 +648,7 @@ public:
 					case SIGNAL:
 						return signal->start_line;
 					case GROUP:
+					case TOOL_BUTTON:
 						return annotation->start_line;
 					case UNDEFINED:
 						ERR_FAIL_V_MSG(-1, "Reaching undefined member type.");
@@ -668,6 +673,7 @@ public:
 					case SIGNAL:
 						return signal->get_datatype();
 					case GROUP:
+					case TOOL_BUTTON:
 						return DataType();
 					case UNDEFINED:
 						return DataType();
@@ -692,6 +698,7 @@ public:
 					case SIGNAL:
 						return signal;
 					case GROUP:
+					case TOOL_BUTTON:
 						return annotation;
 					case UNDEFINED:
 						return nullptr;
@@ -729,8 +736,8 @@ public:
 				type = ENUM_VALUE;
 				enum_value = p_enum_value;
 			}
-			Member(AnnotationNode *p_annotation) {
-				type = GROUP;
+			Member(AnnotationNode *p_annotation, Member::Type p_type) {
+				type = p_type;
 				annotation = p_annotation;
 			}
 		};
@@ -788,7 +795,11 @@ public:
 			// Avoid name conflict. See GH-78252.
 			StringName name = vformat("@group_%d_%s", members.size(), p_annotation_node->export_info.name);
 			members_indices[name] = members.size();
-			members.push_back(Member(p_annotation_node));
+			members.push_back(Member(p_annotation_node, Member::Type::GROUP));
+		}
+		void add_tool_button_member(AnnotationNode *p_annotation_node) {
+			members_indices[p_annotation_node->export_info.name] = members.size();
+			members.push_back(Member(p_annotation_node, Member::Type::TOOL_BUTTON));
 		}
 
 		ClassNode() {
@@ -1498,6 +1509,7 @@ private:
 	bool tool_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool icon_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool onready_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
+	bool tool_button_annotation(AnnotationNode *p_annotation, Node *p_node, ClassNode *p_class);
 	template <PropertyHint t_hint, Variant::Type t_type>
 	bool export_annotations(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool export_storage_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
