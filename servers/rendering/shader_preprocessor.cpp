@@ -420,17 +420,32 @@ void ShaderPreprocessor::process_define(Tokenizer *p_tokenizer) {
 		return;
 	}
 
+	bool functionlike = false;
 	Vector<String> args;
 	if (p_tokenizer->peek() == '(') {
-		// Macro has arguments.
 		p_tokenizer->get_token();
+		functionlike = true;
 
 		while (true) {
 			String name = p_tokenizer->get_identifier();
 			if (name.is_empty()) {
+				//Support 0 argument funktionlike macros.
+				if (args.is_empty()) {
+					p_tokenizer->skip_whitespace();
+					if (p_tokenizer->get_token().text == ')') {
+						break;
+					}
+				}
+
 				set_error(RTR("Invalid argument name."), line);
 				return;
 			}
+
+			if (args.has(name)) {
+				set_error(RTR("Duplicate macro parameter name:") + " '" + name + "'", line);
+				return;
+			}
+
 			args.push_back(name);
 
 			p_tokenizer->skip_whitespace();
@@ -458,6 +473,7 @@ void ShaderPreprocessor::process_define(Tokenizer *p_tokenizer) {
 	if (!args.is_empty()) {
 		define->arguments = args;
 	}
+	define->is_functionlike = functionlike;
 	define->body = body;
 	state->defines[label] = define;
 }
@@ -1008,18 +1024,20 @@ bool ShaderPreprocessor::expand_macros_once(const String &p_line, int p_line_num
 
 	int index_start = 0;
 	int index = 0;
-	if (find_match(result, key, index, index_start)) {
+	while (find_match(result, key, index, index_start)) {
 		String body = define->body;
-		if (define->arguments.size() > 0) {
-			// Complex macro with arguments.
+		if (define->is_functionlike) {
+			// Functionlike Macro with parenthesis.
 
 			int args_start = -1;
 			int args_end = -1;
 			int brackets_open = 0;
+			bool reached_end = false;
+			bool macro_name_used_as_identifier = false;
+
 			Vector<String> args;
 			for (int i = index_start - 1; i < p_line.length(); i++) {
 				bool add_argument = false;
-				bool reached_end = false;
 				char32_t c = p_line[i];
 
 				if (c == '(') {
@@ -1028,6 +1046,11 @@ bool ShaderPreprocessor::expand_macros_once(const String &p_line, int p_line_num
 						args_start = i + 1;
 						args_end = -1;
 					}
+				} else if (c != ' ' && c != '\t' && args_start == -1) {
+					//functionlike macro has to start with an open parenthesis, otherwise we assume it's a variable or literal
+					macro_name_used_as_identifier = true;
+					break;
+
 				} else if (c == ')') {
 					brackets_open--;
 					if (brackets_open == 0) {
@@ -1050,17 +1073,29 @@ bool ShaderPreprocessor::expand_macros_once(const String &p_line, int p_line_num
 
 					String arg = p_line.substr(args_start, args_end - args_start).strip_edges();
 					if (arg.is_empty()) {
-						set_error(RTR("Invalid macro argument."), p_line_number);
-						return false;
+						//Support 0 argument functionlike macros.
+						if (!reached_end || !args.is_empty()) {
+							set_error(RTR("Invalid macro argument."), p_line_number);
+							return false;
+						}
+					} else {
+						args.append(arg);
+						args_start = args_end + 1;
 					}
-					args.append(arg);
-
-					args_start = args_end + 1;
 				}
 
 				if (reached_end) {
 					break;
 				}
+			}
+
+			if (macro_name_used_as_identifier) {
+				continue;
+			}
+
+			//Functionlike Macros require brackets to be expanded
+			if (!reached_end) {
+				return false;
 			}
 
 			if (args.size() != define->arguments.size()) {
@@ -1101,6 +1136,7 @@ bool ShaderPreprocessor::find_match(const String &p_string, const String &p_valu
 	// Looks for value in string and then determines if the boundaries
 	// are non-word characters. This method semi-emulates \b in regex.
 	r_index = p_string.find(p_value, r_index_start);
+
 	while (r_index > -1) {
 		if (r_index > 0) {
 			if (is_char_word(p_string[r_index - 1])) {
