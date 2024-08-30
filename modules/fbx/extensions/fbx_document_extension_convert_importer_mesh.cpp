@@ -45,14 +45,14 @@ void FBXDocumentExtensionConvertImporterMesh::_copy_meta(Object *p_src_object, O
 
 Error FBXDocumentExtensionConvertImporterMesh::import_post(Ref<GLTFState> p_state, Node *p_root) {
 	ERR_FAIL_NULL_V(p_root, ERR_INVALID_PARAMETER);
-	ERR_FAIL_COND_V(p_state.is_null(), ERR_INVALID_PARAMETER);
+	ERR_FAIL_NULL_V(p_state, ERR_INVALID_PARAMETER);
 	List<Node *> queue;
 	queue.push_back(p_root);
 	List<Node *> delete_queue;
 	while (!queue.is_empty()) {
 		List<Node *>::Element *E = queue.front();
 		Node *node = E->get();
-		ImporterMeshInstance3D *mesh_3d = Object::cast_to<ImporterMeshInstance3D>(node);
+		ImporterMeshInstance3D *mesh_3d = cast_to<ImporterMeshInstance3D>(node);
 		if (mesh_3d) {
 			MeshInstance3D *mesh_instance_node_3d = memnew(MeshInstance3D);
 			Ref<ImporterMesh> mesh = mesh_3d->get_mesh();
