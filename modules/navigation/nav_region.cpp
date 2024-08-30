@@ -103,7 +103,98 @@ void NavRegion::set_navigation_mesh(Ref<NavigationMesh> p_navigation_mesh) {
 	polygons_dirty = true;
 }
 
+Vector3 NavRegion::get_closest_point_to_segment(const Vector3 &p_from, const Vector3 &p_to, const bool p_use_collision) const {
+	RWLockRead read_lock(region_rwlock);
+
+	bool use_collision = p_use_collision;
+	Vector3 closest_point;
+	real_t closest_point_d = FLT_MAX;
+
+	for (const gd::Polygon &p : get_polygons()) {
+		// For each face check the distance to the segment
+		for (size_t point_id = 2; point_id < p.points.size(); point_id += 1) {
+			const Face3 f(p.points[0].pos, p.points[point_id - 1].pos, p.points[point_id].pos);
+			Vector3 inters;
+			if (f.intersects_segment(p_from, p_to, &inters)) {
+				const real_t d = p_from.distance_to(inters);
+				if (use_collision == false) {
+					closest_point = inters;
+					use_collision = true;
+					closest_point_d = d;
+				} else if (closest_point_d > d) {
+					closest_point = inters;
+					closest_point_d = d;
+				}
+			}
+			// If segment does not itersect face, check the distance from segment's endpoints.
+			else if (!use_collision) {
+				const Vector3 p_from_closest = f.get_closest_point_to(p_from);
+				const real_t d_p_from = p_from.distance_to(p_from_closest);
+				if (closest_point_d > d_p_from) {
+					closest_point = p_from_closest;
+					closest_point_d = d_p_from;
+				}
+
+				const Vector3 p_to_closest = f.get_closest_point_to(p_to);
+				const real_t d_p_to = p_to.distance_to(p_to_closest);
+				if (closest_point_d > d_p_to) {
+					closest_point = p_to_closest;
+					closest_point_d = d_p_to;
+				}
+			}
+		}
+		// Finally, check for a case when shortest distance is between some point located on a face's edge and some point located on a line segment.
+		if (!use_collision) {
+			for (size_t point_id = 0; point_id < p.points.size(); point_id += 1) {
+				Vector3 a, b;
+
+				Geometry3D::get_closest_points_between_segments(
+						p_from,
+						p_to,
+						p.points[point_id].pos,
+						p.points[(point_id + 1) % p.points.size()].pos,
+						a,
+						b);
+
+				const real_t d = a.distance_to(b);
+				if (d < closest_point_d) {
+					closest_point_d = d;
+					closest_point = b;
+				}
+			}
+		}
+	}
+
+	return closest_point;
+}
+
+gd::ClosestPointQueryResult NavRegion::get_closest_point_info(const Vector3 &p_point) const {
+	RWLockRead read_lock(region_rwlock);
+
+	gd::ClosestPointQueryResult result;
+	real_t closest_point_ds = FLT_MAX;
+
+	for (const gd::Polygon &p : get_polygons()) {
+		// For each face check the distance to the point
+		for (size_t point_id = 2; point_id < p.points.size(); point_id += 1) {
+			const Face3 f(p.points[0].pos, p.points[point_id - 1].pos, p.points[point_id].pos);
+			const Vector3 inters = f.get_closest_point_to(p_point);
+			const real_t ds = inters.distance_squared_to(p_point);
+			if (ds < closest_point_ds) {
+				result.point = inters;
+				result.normal = f.get_plane().normal;
+				result.owner = p.owner->get_self();
+				closest_point_ds = ds;
+			}
+		}
+	}
+
+	return result;
+}
+
 Vector3 NavRegion::get_random_point(uint32_t p_navigation_layers, bool p_uniformly) const {
+	RWLockRead read_lock(region_rwlock);
+
 	if (!get_enabled()) {
 		return Vector3();
 	}
@@ -186,6 +277,8 @@ Vector3 NavRegion::get_random_point(uint32_t p_navigation_layers, bool p_uniform
 }
 
 bool NavRegion::sync() {
+	RWLockWrite write_lock(region_rwlock);
+
 	bool something_changed = polygons_dirty /* || something_dirty? */;
 
 	update_polygons();
