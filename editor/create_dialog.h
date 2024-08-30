@@ -64,13 +64,23 @@ class CreateDialog : public ConfirmationDialog {
 	HashMap<String, TreeItem *> search_options_types;
 	HashMap<String, String> custom_type_parents;
 	HashMap<String, int> custom_type_indices;
-	List<StringName> type_list;
+	// Pair of <type_name, search_keywords>
+	List<Pair<StringName, PackedStringArray>> type_list;
 	HashSet<StringName> type_blacklist;
 
+	struct TypeListCompare {
+		StringName::AlphCompare compare;
+
+		_FORCE_INLINE_ bool operator()(const Pair<StringName, PackedStringArray> &l, const Pair<StringName, PackedStringArray> &r) const {
+			return compare(l.first, r.first);
+		}
+	};
+
 	void _update_search();
+	float _compute_search_score(const String &p_text, const String &p_search_text) const;
 	bool _should_hide_type(const StringName &p_type) const;
-	void _add_type(const StringName &p_type, TypeCategory p_type_category);
-	void _configure_search_option_item(TreeItem *r_item, const StringName &p_type, TypeCategory p_type_category);
+	void _add_type(const StringName &p_type, TypeCategory p_type_category, const String &p_match_keyword);
+	void _configure_search_option_item(TreeItem *r_item, const StringName &p_type, TypeCategory p_type_category, const String &p_match_keyword);
 	float _score_type(const String &p_type, const String &p_search) const;
 	bool _is_type_preferred(const String &p_type) const;
 
