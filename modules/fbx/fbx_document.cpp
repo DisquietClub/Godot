@@ -2490,7 +2490,6 @@ PackedByteArray FBXDocument::generate_buffer(Ref<GLTFState> p_state) {
 }
 
 Error FBXDocument::write_to_filesystem(Ref<GLTFState> p_state, const String &p_path) {
-	//todo: everything
 	return ERR_UNAVAILABLE;
 }
 
