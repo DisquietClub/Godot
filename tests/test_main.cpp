@@ -149,6 +149,7 @@
 #include "tests/scene/test_navigation_obstacle_3d.h"
 #include "tests/scene/test_navigation_region_2d.h"
 #include "tests/scene/test_navigation_region_3d.h"
+#include "tests/servers/test_navigation_heap.h"
 #include "tests/servers/test_navigation_server_2d.h"
 #include "tests/servers/test_navigation_server_3d.h"
 #endif // MODULE_NAVIGATION_ENABLED
