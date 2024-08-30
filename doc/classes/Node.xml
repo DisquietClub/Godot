@@ -644,6 +644,8 @@
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if physics processing is enabled (see [method set_physics_process]).
+				[b]Note:[/b] This is also false when [method _physics_process] is not being used (unless manually set by [method set_physics_process]).
+				[b]See also:[/b] [method can_process].
 			</description>
 		</method>
 		<method name="is_physics_processing_internal" qualifiers="const">
@@ -656,6 +658,8 @@
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if processing is enabled (see [method set_process]).
+				[b]Note:[/b] This is also false when [method _process] is not being used (unless manually set by [method set_process]).
+				[b]See also:[/b] [method can_process].
 			</description>
 		</method>
 		<method name="is_processing_input" qualifiers="const">
