@@ -537,6 +537,9 @@ public:
 		bool single_statement = false;
 		bool use_comma_between_statements = false;
 
+		DataType expected_type = TYPE_VOID;
+		HashSet<int> constants;
+
 		BlockNode() :
 				Node(NODE_TYPE_BLOCK) {}
 	};
