@@ -1920,6 +1920,7 @@ void EditorFileSystem::_update_script_documentation() {
 
 		if (!efd || index < 0) {
 			// The file was removed
+			EditorHelp::remove_script_doc_by_path(path);
 			continue;
 		}
 
@@ -1932,7 +1933,7 @@ void EditorFileSystem::_update_script_documentation() {
 				}
 				Vector<DocData::ClassDoc> docs = scr->get_documentation();
 				for (int j = 0; j < docs.size(); j++) {
-					EditorHelp::get_doc_data()->add_doc(docs[j]);
+					EditorHelp::add_doc(docs[j]);
 				}
 			}
 		}

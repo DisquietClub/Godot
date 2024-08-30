@@ -484,8 +484,9 @@ void EditorNode::_gdextensions_reloaded() {
 	// Reload script editor to revalidate GDScript if classes are added or removed.
 	ScriptEditor::get_singleton()->reload_scripts(true);
 
-	// Regenerate documentation.
-	EditorHelp::generate_doc();
+	// Regenerate documentation without using script documentation cache since that would
+	// revert doc changes during this session.
+	EditorHelp::generate_doc(true, false);
 }
 
 void EditorNode::_select_default_main_screen_plugin() {
@@ -850,6 +851,11 @@ void EditorNode::_notification(int p_what) {
 				EditorHelpHighlighter::get_singleton()->reset_cache();
 			}
 #endif
+		} break;
+
+		case NOTIFICATION_PREDELETE: {
+			// Cannot be done in destructor since saving a resource emits EditorNode signals using memory that's being destroyed.
+			EditorHelp::save_script_doc_cache();
 		} break;
 	}
 }

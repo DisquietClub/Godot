@@ -193,12 +193,16 @@ class EditorHelp : public VBoxContainer {
 
 	static int doc_generation_count;
 	static String doc_version_hash;
+	static bool script_docs_loaded;
 	static Thread worker_thread;
 
 	static void _wait_for_thread();
 	static void _load_doc_thread(void *p_udata);
 	static void _gen_doc_thread(void *p_udata);
 	static void _gen_extensions_docs();
+	static void _load_script_doc_cache();
+	static void _gen_script_doc_thread(void *p_udata);
+	static void _delete_script_cache();
 	static void _compute_doc_version_hash();
 
 	struct PropertyCompare {
@@ -218,10 +222,20 @@ protected:
 	static void _bind_methods();
 
 public:
-	static void generate_doc(bool p_use_cache = true);
-	static DocTools *get_doc_data();
+	static void generate_doc(bool p_use_cache = true, bool p_use_script_cache = true);
 	static void cleanup_doc();
+	static void regenerate_script_doc_cache();
+	static void save_script_doc_cache();
 	static String get_cache_full_path();
+	static String get_script_doc_cache_full_path();
+
+	// Adding scripts to DocData directly may make script doc cache inconsistent. Use methods below when adding script docs.
+	static DocTools *get_doc_data();
+	// Method forwarding to underlying DocTools to keep script doc cache consistent.
+	static void add_doc(const DocData::ClassDoc &p_class_doc);
+	static void remove_doc(const String &p_class_name);
+	static void remove_script_doc_by_path(const String &p_path);
+	static bool has_doc(const String &p_class_name);
 
 	static void load_xml_buffer(const uint8_t *p_buffer, int p_size);
 	static void remove_class(const String &p_class);

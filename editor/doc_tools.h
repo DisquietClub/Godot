@@ -42,9 +42,10 @@ public:
 
 	static Error erase_classes(const String &p_dir);
 
-	void merge_from(const DocTools &p_data);
+	void merge_from(const DocTools &p_data, bool *r_merged_script_doc = nullptr);
 	void add_doc(const DocData::ClassDoc &p_class_doc);
 	void remove_doc(const String &p_class_name);
+	bool remove_script_doc_by_path(const String &p_path);
 	bool has_doc(const String &p_class_name);
 	enum GenerateFlags {
 		GENERATE_FLAG_SKIP_BASIC_TYPES = (1 << 0),
