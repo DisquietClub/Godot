@@ -319,8 +319,9 @@ double StreamPeer::get_double() {
 }
 
 String StreamPeer::get_string(int p_bytes) {
+	uint32_t stored_size = get_u32();
 	if (p_bytes < 0) {
-		p_bytes = get_u32();
+		p_bytes = stored_size;
 	}
 	ERR_FAIL_COND_V(p_bytes < 0, String());
 
@@ -334,8 +335,9 @@ String StreamPeer::get_string(int p_bytes) {
 }
 
 String StreamPeer::get_utf8_string(int p_bytes) {
+	uint32_t stored_size = get_u32();
 	if (p_bytes < 0) {
-		p_bytes = get_u32();
+		p_bytes = stored_size;
 	}
 	ERR_FAIL_COND_V(p_bytes < 0, String());
 
