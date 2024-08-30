@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  joint_3d.h                                                            */
+/*  configuration_info_editor_plugin.h                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,60 +28,61 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef JOINT_3D_H
-#define JOINT_3D_H
+#ifndef CONFIGURATION_INFO_EDITOR_PLUGIN_H
+#define CONFIGURATION_INFO_EDITOR_PLUGIN_H
 
-#include "scene/3d/node_3d.h"
-#include "scene/3d/physics/physics_body_3d.h"
+#include "editor/plugins/editor_plugin.h"
 
-class Joint3D : public Node3D {
-	GDCLASS(Joint3D, Node3D);
+#include "editor/editor_inspector.h"
+#include "editor/plugins/editor_plugin.h"
+#include "scene/gui/item_list.h"
+#include "scene/gui/label.h"
+#include "scene/gui/margin_container.h"
+#include "scene/gui/panel_container.h"
+#include "scene/gui/texture_rect.h"
 
-	RID ba, bb;
+class GridContainer;
 
-	RID joint;
+// Inspector controls.
+class ConfigurationInfoList : public MarginContainer {
+	GDCLASS(ConfigurationInfoList, MarginContainer);
 
-	NodePath a;
-	NodePath b;
+	Object *object = nullptr;
 
-	int solver_priority = 1;
-	bool exclude_from_collision = true;
-	String warning;
-	bool configured = false;
+	PanelContainer *bg_panel = nullptr;
+	GridContainer *grid = nullptr;
+	TextureRect *expand_icon = nullptr;
+	Label *title_label = nullptr;
+	ItemList *config_info_list = nullptr;
+	Control *list_filler_right = nullptr;
+
+	void _update_content();
+	void _update_toggler();
+	virtual void gui_input(const Ref<InputEvent> &p_event) override;
 
 protected:
-	void _disconnect_signals();
-	void _body_exit_tree();
-	void _update_joint(bool p_only_free = false);
-
-	void _notification(int p_what);
-
-	virtual void _configure_joint(RID p_joint, PhysicsBody3D *body_a, PhysicsBody3D *body_b) = 0;
-
-	static void _bind_methods();
-
-	_FORCE_INLINE_ bool is_configured() const { return configured; }
+	void _notification(int p_notification);
 
 public:
-#ifdef TOOLS_ENABLED
-	virtual Array get_configuration_info() const override;
-#endif
+	void set_object(Object *p_object);
 
-	void set_node_a(const NodePath &p_node_a);
-	NodePath get_node_a() const;
-
-	void set_node_b(const NodePath &p_node_b);
-	NodePath get_node_b() const;
-
-	void set_solver_priority(int p_priority);
-	int get_solver_priority() const;
-
-	void set_exclude_nodes_from_collision(bool p_enable);
-	bool get_exclude_nodes_from_collision() const;
-
-	RID get_rid() const { return joint; }
-	Joint3D();
-	~Joint3D();
+	ConfigurationInfoList();
 };
 
-#endif // JOINT_3D_H
+class EditorInspectorPluginConfigurationInfo : public EditorInspectorPlugin {
+	GDCLASS(EditorInspectorPluginConfigurationInfo, EditorInspectorPlugin);
+
+public:
+	virtual bool can_handle(Object *p_object) override;
+	virtual void parse_begin(Object *p_object) override;
+};
+
+// Editor plugin.
+class ConfigurationInfoEditorPlugin : public EditorPlugin {
+	GDCLASS(ConfigurationInfoEditorPlugin, EditorPlugin);
+
+public:
+	ConfigurationInfoEditorPlugin();
+};
+
+#endif // CONFIGURATION_INFO_EDITOR_PLUGIN_H
