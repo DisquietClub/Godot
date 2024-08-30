@@ -32,6 +32,7 @@
 #define RESOURCE_IMPORTER_WAV_H
 
 #include "core/io/resource_importer.h"
+#include "scene/resources/audio_stream_wav.h"
 
 class ResourceImporterWAV : public ResourceImporter {
 	GDCLASS(ResourceImporterWAV, ResourceImporter);
@@ -137,6 +138,43 @@ public:
 			} else {
 				*out = nibble;
 			}
+		}
+	}
+
+	static void _compress_qoa(const Vector<float> &p_data, Vector<uint8_t> &dst_data, qoa_desc *p_desc) {
+		int datalen = p_data.size();
+		uint32_t frames = (p_desc->samples + QOA_FRAME_LEN - 1) / QOA_FRAME_LEN;
+		uint32_t slices = (p_desc->samples + QOA_SLICE_LEN - 1) / QOA_SLICE_LEN;
+		uint32_t dst_size = 8 + frames * 8 + frames * QOA_LMS_LEN * 4 * p_desc->channels + slices * 8 * p_desc->channels;
+
+		dst_data.resize(dst_size);
+
+		for (uint32_t c = 0; c < p_desc->channels; c++) {
+			p_desc->lms[c].weights[0] = 0;
+			p_desc->lms[c].weights[1] = 0;
+			p_desc->lms[c].weights[2] = -(1 << 13);
+			p_desc->lms[c].weights[3] = (1 << 14);
+
+			for (int i = 0; i < QOA_LMS_LEN; i++) {
+				p_desc->lms[c].history[i] = 0;
+			}
+		}
+
+		int p = qoa_encode_header(p_desc, dst_data.ptrw());
+
+		LocalVector<int16_t> data16;
+		data16.resize(datalen);
+		for (int i = 0; i < datalen; i++) {
+			data16[i] = CLAMP(p_data[i] * 32768, -32768, 32767);
+		}
+
+		uint32_t frame_len = QOA_FRAME_LEN;
+		for (uint32_t s = 0; s < p_desc->samples; s += frame_len) {
+			int maxlen = p_desc->samples - s;
+			frame_len = CLAMP(QOA_FRAME_LEN, 0, maxlen);
+			const int16_t *fs = data16.ptr() + s * p_desc->channels;
+			uint32_t frame_size = qoa_encode_frame(fs, p_desc, frame_len, dst_data.ptrw() + p);
+			p += frame_size;
 		}
 	}
 
