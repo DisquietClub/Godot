@@ -342,14 +342,14 @@ void AnimationPlayerEditor::_animation_selected(int p_which) {
 
 			// Player shouldn't access parent if its scene root
 			if (!root || (player == get_tree()->get_edited_scene_root() && player->get_root_node() == SceneStringName(path_pp))) {
-				NodePath cached_root_path = player->get_path_to(cached_player_root_node);
-				if (cached_player_root_node == player->get_node_or_null(cached_root_path)) {
+				NodePath cached_root_path = player->get_path_to(get_cached_root_node());
+				if (player->get_node_or_null(cached_root_path) != nullptr) {
 					player->set_root_node(cached_root_path);
 				} else {
 					player->set_root_node(SceneStringName(path_pp)); // No other choice, preventing crash
 				}
 			} else {
-				cached_player_root_node = root; // Caching as track_editor can lose track of player's root node
+				cached_root_node_id = root->get_instance_id(); // Caching as track_editor can lose track of player's root node
 				track_editor->set_root(root);
 			}
 		}
@@ -1832,6 +1832,10 @@ AnimationMixer *AnimationPlayerEditor::fetch_mixer_for_library() const {
 		}
 	}
 	return original_node;
+}
+
+Node *AnimationPlayerEditor::get_cached_root_node() const {
+	return Object::cast_to<Node>(ObjectDB::get_instance(cached_root_node_id));
 }
 
 bool AnimationPlayerEditor::_validate_tracks(const Ref<Animation> p_anim) {
