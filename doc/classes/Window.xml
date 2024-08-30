@@ -651,6 +651,8 @@
 			[b]Note:[/b] On Windows, the portion of a window that lies outside the region is not drawn, while on Linux (X11) and macOS it is.
 			[b]Note:[/b] This property is implemented on Linux (X11), macOS and Windows.
 		</member>
+		<member name="no_title" type="bool" setter="set_flag" getter="get_flag" default="false">
+		</member>
 		<member name="popup_window" type="bool" setter="set_flag" getter="get_flag" default="false">
 			If [code]true[/code], the [Window] will be considered a popup. Popups are sub-windows that don't show as separate windows in system's window manager's window list and will send close request when anything is clicked outside of them (unless [member exclusive] is enabled).
 		</member>
@@ -842,8 +844,10 @@
 			All mouse events are passed to the underlying window of the same application.
 			[b]Note:[/b] This flag has no effect in embedded windows.
 		</constant>
-		<constant name="FLAG_MAX" value="8" enum="Flags">
+		<constant name="FLAG_MAX" value="9" enum="Flags">
 			Max value of the [enum Flags].
+		</constant>
+		<constant name="FLAG_NO_TITLE_BAR" value="8" enum="Flags">
 		</constant>
 		<constant name="CONTENT_SCALE_MODE_DISABLED" value="0" enum="ContentScaleMode">
 			The content will not be scaled to match the [Window]'s size.

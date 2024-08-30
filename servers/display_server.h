@@ -150,6 +150,7 @@ public:
 		FEATURE_NATIVE_HELP,
 		FEATURE_NATIVE_DIALOG_INPUT,
 		FEATURE_NATIVE_DIALOG_FILE,
+		FEATURE_NO_TITLE_BAR,
 	};
 
 	virtual bool has_feature(Feature p_feature) const = 0;
@@ -381,6 +382,7 @@ public:
 		WINDOW_FLAG_POPUP,
 		WINDOW_FLAG_EXTEND_TO_TITLE,
 		WINDOW_FLAG_MOUSE_PASSTHROUGH,
+		WINDOW_FLAG_NO_TITLE_BAR,
 		WINDOW_FLAG_MAX,
 	};
 
@@ -394,6 +396,7 @@ public:
 		WINDOW_FLAG_POPUP_BIT = (1 << WINDOW_FLAG_POPUP),
 		WINDOW_FLAG_EXTEND_TO_TITLE_BIT = (1 << WINDOW_FLAG_EXTEND_TO_TITLE),
 		WINDOW_FLAG_MOUSE_PASSTHROUGH_BIT = (1 << WINDOW_FLAG_MOUSE_PASSTHROUGH),
+		WINDOW_FLAG_NO_TITLE_BAR_BIT = (1 << WINDOW_FLAG_NO_TITLE_BAR),
 	};
 
 	virtual WindowID create_sub_window(WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Rect2i &p_rect = Rect2i(), bool p_exclusive = false, WindowID p_transient_parent = INVALID_WINDOW_ID);

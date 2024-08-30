@@ -104,6 +104,7 @@ class EditorSettingsDialog;
 class EditorTitleBar;
 class EditorToaster;
 class EditorUndoRedoManager;
+class EditorWindowButtons;
 class ExportTemplateManager;
 class FBXImporterManager;
 class FileSystemDock;
@@ -338,6 +339,8 @@ private:
 	bool exiting = false;
 	bool dimmed = false;
 
+	bool global_menu = false;
+
 	DisplayServer::WindowMode prev_mode = DisplayServer::WINDOW_MODE_MAXIMIZED;
 	int old_split_ofs = 0;
 	VSplitContainer *top_split = nullptr;
@@ -347,6 +350,7 @@ private:
 	Control *left_menu_spacer = nullptr;
 	Control *right_menu_spacer = nullptr;
 	EditorTitleBar *title_bar = nullptr;
+	EditorWindowButtons *window_buttons = nullptr;
 	EditorRunBar *project_run_bar = nullptr;
 	VBoxContainer *main_screen_vbox = nullptr;
 	MenuBar *main_menu = nullptr;
@@ -577,6 +581,8 @@ private:
 	void _save_editor_states(const String &p_file, int p_idx = -1);
 	void _load_editor_plugin_states_from_config(const Ref<ConfigFile> &p_config_file);
 	void _update_title();
+	void _editor_settings_changed();
+	void _update_editor_window();
 	void _version_control_menu_option(int p_idx);
 	void _close_messages();
 	void _show_messages();
@@ -944,6 +950,7 @@ public:
 	void save_scene_list(const HashSet<String> &p_scene_paths);
 	void save_before_run();
 	void try_autosave();
+	void exit();
 	void restart_editor();
 	void unload_editor_addons();
 

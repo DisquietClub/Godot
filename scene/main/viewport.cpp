@@ -317,7 +317,7 @@ void Viewport::_sub_window_update(Window *p_window) {
 	RS::get_singleton()->canvas_item_clear(sw.canvas_item);
 	Rect2i r = Rect2i(p_window->get_position(), sw.window->get_size());
 
-	if (!p_window->get_flag(Window::FLAG_BORDERLESS)) {
+	if (!p_window->get_flag(Window::FLAG_BORDERLESS) && !p_window->get_flag(Window::FLAG_NO_TITLE_BAR)) {
 		Ref<StyleBox> panel = gui.subwindow_focused == p_window ? p_window->theme_cache.embedded_border : p_window->theme_cache.embedded_unfocused_border;
 		panel->draw(sw.canvas_item, r);
 
@@ -2028,7 +2028,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				for (int i = embedder->gui.sub_windows.size() - 1; i >= 0; i--) {
 					Window *sw = embedder->gui.sub_windows[i].window;
 					Rect2 swrect = Rect2i(sw->get_position(), sw->get_size());
-					if (!sw->get_flag(Window::FLAG_BORDERLESS)) {
+					if (!sw->get_flag(Window::FLAG_BORDERLESS) && !sw->get_flag(Window::FLAG_NO_TITLE_BAR)) {
 						int title_height = sw->theme_cache.title_height;
 						swrect.position.y -= title_height;
 						swrect.size.y += title_height;
@@ -2880,7 +2880,7 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 
 			Rect2i r = Rect2i(sw.window->get_position(), sw.window->get_size());
 
-			if (!sw.window->get_flag(Window::FLAG_BORDERLESS)) {
+			if (!sw.window->get_flag(Window::FLAG_BORDERLESS) && !sw.window->get_flag(Window::FLAG_NO_TITLE_BAR)) {
 				// Check top bar.
 				int title_height = sw.window->theme_cache.title_height;
 				Rect2i title_bar = r;
@@ -3031,7 +3031,7 @@ void Viewport::_update_mouse_over(Vector2 p_pos) {
 			Rect2 swrect = Rect2(sw->get_position(), sw->get_size());
 			Rect2 swrect_border = swrect;
 
-			if (!sw->get_flag(Window::FLAG_BORDERLESS)) {
+			if (!sw->get_flag(Window::FLAG_BORDERLESS) && !sw->get_flag(Window::FLAG_NO_TITLE_BAR)) {
 				int title_height = sw->theme_cache.title_height;
 				int margin = sw->theme_cache.resize_margin;
 				swrect_border.position.y -= title_height + margin;
