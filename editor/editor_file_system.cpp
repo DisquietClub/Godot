@@ -802,17 +802,8 @@ bool EditorFileSystem::_update_scan_actions() {
 			case ItemAction::ACTION_FILE_RELOAD: {
 				int idx = ia.dir->find_file_index(ia.file);
 				ERR_CONTINUE(idx == -1);
-				String full_path = ia.dir->get_file_path(idx);
 
-				const EditorFileSystemDirectory::FileInfo *fi = ia.dir->files[idx];
-				if (ClassDB::is_parent_class(fi->type, SNAME("Script"))) {
-					_queue_update_script_class(full_path, fi->type, fi->script_class_name, fi->script_class_extends, fi->script_class_icon_path);
-				}
-				if (fi->type == SNAME("PackedScene")) {
-					_queue_update_scene_groups(full_path);
-				}
-
-				reloads.push_back(full_path);
+				reloads.push_back(ia.dir->get_file_path(idx));
 
 			} break;
 		}
@@ -837,7 +828,7 @@ bool EditorFileSystem::_update_scan_actions() {
 		}
 	}
 
-	if (reimports.size()) {
+	if (reimports.size() > 0) {
 		if (_scan_import_support(reimports)) {
 			return true;
 		}
@@ -846,6 +837,11 @@ bool EditorFileSystem::_update_scan_actions() {
 	} else {
 		//reimport files will update the uid cache file so if nothing was reimported, update it manually
 		ResourceUID::get_singleton()->update_cache();
+	}
+
+	if (reloads.size() > 0) {
+		// Update global class names, dependencies, etc...
+		update_files(reloads);
 	}
 
 	if (first_scan) {
@@ -1312,8 +1308,7 @@ void EditorFileSystem::_scan_fs_changes(EditorFileSystemDirectory *p_dir, ScanPr
 				ia.file = p_dir->files[i]->file;
 				scan_actions.push_back(ia);
 			}
-		} else if (ResourceCache::has(path)) { //test for potential reload
-
+		} else {
 			uint64_t mt = FileAccess::get_modified_time(path);
 
 			if (mt != p_dir->files[i]->modified_time) {
