@@ -335,9 +335,9 @@ inline void draw_glyph_outline(const Glyph &p_gl, const RID &p_canvas, const Col
 	}
 }
 
+#ifdef TOOLS_ENABLED
 Array Label::get_configuration_info() const {
-	// PackedStringArray warnings = Control::get_configuration_warnings();
-	Array warnings;
+	Array warnings = Control::get_configuration_info();
 
 	// FIXME: This is not ideal and the sizing model should be fixed,
 	// but for now we have to warn about this impossible to resolve combination.
@@ -348,7 +348,9 @@ Array Label::get_configuration_info() const {
 		// and it can be a container, but that makes no difference to the user.
 		Container *parent_container = Object::cast_to<Container>(get_parent_control());
 		if (parent_container && autowrap_mode != TextServer::AUTOWRAP_OFF && get_custom_minimum_size() == Size2()) {
-			warnings.push_back(RTR("Labels with autowrapping enabled must have a custom minimum size configured to work correctly inside a container."));
+			CONFIG_WARNING_P(
+					RTR("Labels with autowrapping enabled must have a custom minimum size configured to work correctly inside a container."),
+					"autowrap_mode");
 		}
 	}
 
@@ -370,10 +372,9 @@ Array Label::get_configuration_info() const {
 		int64_t glyph_count = TS->shaped_text_get_glyph_count(text_rid);
 		for (int64_t i = 0; i < glyph_count; i++) {
 			if (glyph[i].font_rid == RID()) {
-				Dictionary warning;
-				warning["message"] = RTR("The current font does not support rendering one or more characters used in this Label's text.");
-				warning["property"] = "text"; // REDMSER TODO: Try accessing the font using its theme override path, see if that actually shows the warning in the correct place.
-				warnings.push_back(warning);
+				CONFIG_WARNING_P(
+						RTR("The current font does not support rendering one or more characters used in this Label's text."),
+						"text");
 				break;
 			}
 		}
@@ -381,6 +382,7 @@ Array Label::get_configuration_info() const {
 
 	return warnings;
 }
+#endif
 
 void Label::_notification(int p_what) {
 	switch (p_what) {
