@@ -1160,6 +1160,22 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 			set_caret_line(get_caret_line(i) - 1, false, true, 0, i);
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 		}
+
+		// Insert a documentation comment if the caret was previously on a documentation comment block.
+		int prev_line = get_caret_line(i) + (p_above ? 1 : -1);
+
+		if (is_in_doc_comment(prev_line) != -1) {
+			const String prev_line_content = get_line(prev_line).strip_edges();
+
+			for (const String doc_comment : get_doc_comment_delimiters()) {
+				const String beg = doc_comment.get_slice(" ", 0);
+
+				if (prev_line_content.begins_with(beg)) {
+					insert_text_at_caret(doc_comment + " ", i);
+					break;
+				}
+			}
+		}
 	}
 
 	end_multicaret_edit();
@@ -1866,7 +1882,42 @@ TypedArray<String> CodeEdit::get_comment_delimiters() const {
 }
 
 int CodeEdit::is_in_comment(int p_line, int p_column) const {
-	return _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+	const int is_in_comment_delimiter = _is_in_delimiter(p_line, p_column, TYPE_COMMENT);
+
+	if (is_in_comment_delimiter != -1) {
+		return is_in_comment_delimiter;
+	}
+
+	return _is_in_delimiter(p_line, p_column, TYPE_DOC_COMMENT);
+}
+
+// Doc comments
+void CodeEdit::add_doc_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
+	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::remove_doc_comment_delimiter(const String &p_start_key) {
+	_remove_delimiter(p_start_key, TYPE_DOC_COMMENT);
+}
+
+bool CodeEdit::has_doc_comment_delimiter(const String &p_start_key) const {
+	return _has_delimiter(p_start_key, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::set_doc_comment_delimiters(const TypedArray<String> &p_doc_comment_delimiters) {
+	_set_delimiters(p_doc_comment_delimiters, TYPE_DOC_COMMENT);
+}
+
+void CodeEdit::clear_doc_comment_delimiters() {
+	_clear_delimiters(TYPE_DOC_COMMENT);
+}
+
+TypedArray<String> CodeEdit::get_doc_comment_delimiters() const {
+	return _get_delimiters(TYPE_DOC_COMMENT);
+}
+
+int CodeEdit::is_in_doc_comment(int p_line, int p_column) const {
+	return _is_in_delimiter(p_line, p_column, TYPE_DOC_COMMENT);
 }
 
 String CodeEdit::get_delimiter_start_key(int p_delimiter_idx) const {
@@ -2648,6 +2699,17 @@ void CodeEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_in_comment", "line", "column"), &CodeEdit::is_in_comment, DEFVAL(-1));
 
+	// Doc comments
+	ClassDB::bind_method(D_METHOD("add_doc_comment_delimiter", "start_key", "end_key", "line_only"), &CodeEdit::add_doc_comment_delimiter, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("remove_doc_comment_delimiter", "start_key"), &CodeEdit::remove_doc_comment_delimiter);
+	ClassDB::bind_method(D_METHOD("has_doc_comment_delimiter", "start_key"), &CodeEdit::has_doc_comment_delimiter);
+
+	ClassDB::bind_method(D_METHOD("set_doc_comment_delimiters", "comment_delimiters"), &CodeEdit::set_doc_comment_delimiters);
+	ClassDB::bind_method(D_METHOD("clear_doc_comment_delimiters"), &CodeEdit::clear_doc_comment_delimiters);
+	ClassDB::bind_method(D_METHOD("get_doc_comment_delimiters"), &CodeEdit::get_doc_comment_delimiters);
+
+	ClassDB::bind_method(D_METHOD("is_in_doc_comment", "line", "column"), &CodeEdit::is_in_doc_comment, DEFVAL(-1));
+
 	// Util
 	ClassDB::bind_method(D_METHOD("get_delimiter_start_key", "delimiter_index"), &CodeEdit::get_delimiter_start_key);
 	ClassDB::bind_method(D_METHOD("get_delimiter_end_key", "delimiter_index"), &CodeEdit::get_delimiter_end_key);
@@ -2741,6 +2803,7 @@ void CodeEdit::_bind_methods() {
 	ADD_GROUP("Delimiters", "delimiter_");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_strings"), "set_string_delimiters", "get_string_delimiters");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_comments"), "set_comment_delimiters", "get_comment_delimiters");
+	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "delimiter_doc_comments"), "set_doc_comment_delimiters", "get_doc_comment_delimiters");
 
 	ADD_GROUP("Code Completion", "code_completion_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "code_completion_enabled"), "set_code_completion_enabled", "is_code_completion_enabled");
@@ -2935,7 +2998,7 @@ void CodeEdit::_update_code_region_tags() {
 
 	// A shorter delimiter has higher priority.
 	for (int i = delimiters.size() - 1; i >= 0; i--) {
-		if (delimiters[i].type != DelimiterType::TYPE_COMMENT) {
+		if (delimiters[i].type != DelimiterType::TYPE_COMMENT && delimiters[i].type != DelimiterType::TYPE_DOC_COMMENT) {
 			continue;
 		}
 		if (delimiters[i].end_key.is_empty() && delimiters[i].line_only == true) {
@@ -3191,7 +3254,7 @@ void CodeEdit::_add_delimiter(const String &p_start_key, const String &p_end_key
 		delimiter_cache.clear();
 		_update_delimiter_cache();
 	}
-	if (p_type == DelimiterType::TYPE_COMMENT) {
+	if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 		_update_code_region_tags();
 	}
 }
@@ -3211,7 +3274,7 @@ void CodeEdit::_remove_delimiter(const String &p_start_key, DelimiterType p_type
 			delimiter_cache.clear();
 			_update_delimiter_cache();
 		}
-		if (p_type == DelimiterType::TYPE_COMMENT) {
+		if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 			_update_code_region_tags();
 		}
 		break;
@@ -3257,7 +3320,7 @@ void CodeEdit::_clear_delimiters(DelimiterType p_type) {
 	if (!setting_delimiters) {
 		_update_delimiter_cache();
 	}
-	if (p_type == DelimiterType::TYPE_COMMENT) {
+	if (p_type == DelimiterType::TYPE_COMMENT || p_type == DelimiterType::TYPE_DOC_COMMENT) {
 		_update_code_region_tags();
 	}
 }

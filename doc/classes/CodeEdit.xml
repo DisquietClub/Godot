@@ -66,6 +66,16 @@
 				If [param line_only] is [code]true[/code] or [param end_key] is an empty [String], the region does not carry over to the next line.
 			</description>
 		</method>
+		<method name="add_doc_comment_delimiter">
+			<return type="void" />
+			<param index="0" name="start_key" type="String" />
+			<param index="1" name="end_key" type="String" />
+			<param index="2" name="line_only" type="bool" default="false" />
+			<description>
+				Adds a documentation comment delimiter from [param start_key] to [param end_key]. Both keys should be symbols, and [param start_key] must not be shared with other delimiters.
+				If [param line_only] is [code]true[/code] or [param end_key] is an empty [String], the region does not carry over to the next line.
+			</description>
+		</method>
 		<method name="add_string_delimiter">
 			<return type="void" />
 			<param index="0" name="start_key" type="String" />
@@ -105,6 +115,12 @@
 			<return type="void" />
 			<description>
 				Removes all comment delimiters.
+			</description>
+		</method>
+		<method name="clear_doc_comment_delimiters">
+			<return type="void" />
+			<description>
+				Removes all documentation comment delimiters.
 			</description>
 		</method>
 		<method name="clear_executing_lines">
@@ -320,6 +336,13 @@
 				Returns [code]true[/code] if comment [param start_key] exists.
 			</description>
 		</method>
+		<method name="has_doc_comment_delimiter" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="start_key" type="String" />
+			<description>
+				Returns [code]true[/code] if documentation comment [param start_key] exists.
+			</description>
+		</method>
 		<method name="has_string_delimiter" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="start_key" type="String" />
@@ -339,6 +362,14 @@
 			<param index="1" name="column" type="int" default="-1" />
 			<description>
 				Returns delimiter index if [param line] [param column] is in a comment. If [param column] is not provided, will return delimiter index if the entire [param line] is a comment. Otherwise [code]-1[/code].
+			</description>
+		</method>
+		<method name="is_in_doc_comment" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="line" type="int" />
+			<param index="1" name="column" type="int" default="-1" />
+			<description>
+				Returns delimiter index if [param line] [param column] is in a documentation comment. If [param column] is not provided, will return delimiter index if the entire [param line] is a comment. Otherwise [code]-1[/code].
 			</description>
 		</method>
 		<method name="is_in_string" qualifiers="const">
@@ -408,6 +439,13 @@
 			<param index="0" name="start_key" type="String" />
 			<description>
 				Removes the comment delimiter with [param start_key].
+			</description>
+		</method>
+		<method name="remove_doc_comment_delimiter">
+			<return type="void" />
+			<param index="0" name="start_key" type="String" />
+			<description>
+				Removes the documentation comment delimiter with [param start_key].
 			</description>
 		</method>
 		<method name="remove_string_delimiter">
@@ -543,6 +581,9 @@
 		</member>
 		<member name="delimiter_comments" type="String[]" setter="set_comment_delimiters" getter="get_comment_delimiters" default="[]">
 			Sets the comment delimiters. All existing comment delimiters will be removed.
+		</member>
+		<member name="delimiter_doc_comments" type="String[]" setter="set_doc_comment_delimiters" getter="get_doc_comment_delimiters" default="[]">
+			Sets the documentation comment delimiters. All existing documentation comment delimiters will be removed.
 		</member>
 		<member name="delimiter_strings" type="String[]" setter="set_string_delimiters" getter="get_string_delimiters" default="[&quot;&apos; &apos;&quot;, &quot;\&quot; \&quot;&quot;]">
 			Sets the string delimiters. All existing string delimiters will be removed.

@@ -236,6 +236,7 @@ void ScriptTextEditor::_set_theme_for_script() {
 	}
 
 	text_edit->clear_comment_delimiters();
+	text_edit->clear_doc_comment_delimiters();
 
 	List<String> comments;
 	script->get_language()->get_comment_delimiters(&comments);
@@ -254,7 +255,7 @@ void ScriptTextEditor::_set_theme_for_script() {
 	for (const String &doc_comment : doc_comments) {
 		String beg = doc_comment.get_slice(" ", 0);
 		String end = doc_comment.get_slice_count(" ") > 1 ? doc_comment.get_slice(" ", 1) : String();
-		text_edit->add_comment_delimiter(beg, end, end.is_empty());
+		text_edit->add_doc_comment_delimiter(beg, end, end.is_empty());
 
 		if (!end.is_empty() && !text_edit->has_auto_brace_completion_open_key(beg)) {
 			text_edit->add_auto_brace_completion_pair(beg, end);

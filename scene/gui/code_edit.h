@@ -135,6 +135,7 @@ private:
 	enum DelimiterType {
 		TYPE_STRING,
 		TYPE_COMMENT,
+		TYPE_DOC_COMMENT,
 	};
 
 	struct Delimiter {
@@ -447,6 +448,15 @@ public:
 	TypedArray<String> get_comment_delimiters() const;
 
 	int is_in_comment(int p_line, int p_column = -1) const;
+
+	void add_doc_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only = false);
+	void remove_doc_comment_delimiter(const String &p_start_key);
+	bool has_doc_comment_delimiter(const String &p_start_key) const;
+	void set_doc_comment_delimiters(const TypedArray<String> &p_doc_comment_delimiters);
+	void clear_doc_comment_delimiters();
+	TypedArray<String> get_doc_comment_delimiters() const;
+
+	int is_in_doc_comment(int p_line, int p_column = -1) const;
 
 	String get_delimiter_start_key(int p_delimiter_idx) const;
 	String get_delimiter_end_key(int p_delimiter_idx) const;
