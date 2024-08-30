@@ -84,8 +84,8 @@ public:
 
 	int get_surface_override_material_count() const;
 	void set_surface_override_material(int p_surface, const Ref<Material> &p_material);
-	Ref<Material> get_surface_override_material(int p_surface) const;
-	Ref<Material> get_active_material(int p_surface) const;
+	Ref<Material> get_surface_override_material(int p_surface = 0) const;
+	Ref<Material> get_active_material(int p_surface = 0) const;
 
 	Node *create_trimesh_collision_node();
 	void create_trimesh_collision();
