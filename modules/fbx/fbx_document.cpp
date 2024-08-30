@@ -2494,7 +2494,6 @@ Error FBXDocument::write_to_filesystem(Ref<GLTFState> p_state, const String &p_p
 }
 
 Error FBXDocument::append_from_scene(Node *p_node, Ref<GLTFState> p_state, uint32_t p_flags) {
-	//todo: everything
 	return ERR_UNAVAILABLE;
 }
 
