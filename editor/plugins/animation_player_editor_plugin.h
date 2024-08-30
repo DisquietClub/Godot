@@ -94,6 +94,8 @@ class AnimationPlayerEditor : public VBoxContainer {
 	Button *play_from = nullptr;
 	Button *play_bw = nullptr;
 	Button *play_bw_from = nullptr;
+	Button *next_keyframe = nullptr;
+	Button *prev_keyframe = nullptr;
 	Button *autoplay = nullptr;
 
 	MenuButton *tool_anim = nullptr;
@@ -178,6 +180,7 @@ class AnimationPlayerEditor : public VBoxContainer {
 
 	void _select_anim_by_name(const String &p_anim);
 	float _get_editor_step() const;
+	void _go_to_nearest_keyframe(bool p_backward);
 	void _play_pressed();
 	void _play_from_pressed();
 	void _play_bw_pressed();
