@@ -663,6 +663,9 @@ private:
 
 	Object(bool p_reference);
 
+	template <bool t_reversed>
+	void _notification_fast(int p_notification);
+
 protected:
 	_FORCE_INLINE_ bool _instance_binding_reference(bool p_reference) {
 		bool can_die = true;
