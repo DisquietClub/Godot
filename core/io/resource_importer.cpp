@@ -35,6 +35,8 @@
 #include "core/os/os.h"
 #include "core/variant/variant_parser.h"
 
+ResourceFormatImporterLoadOnStartup ResourceImporter::load_on_startup = nullptr;
+
 bool ResourceFormatImporter::SortImporterByName::operator()(const Ref<ResourceImporter> &p_a, const Ref<ResourceImporter> &p_b) const {
 	return p_a->get_importer_name() < p_b->get_importer_name();
 }
@@ -137,6 +139,20 @@ Error ResourceFormatImporter::_get_path_and_type(const String &p_path, PathAndTy
 }
 
 Ref<Resource> ResourceFormatImporter::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
+#ifdef TOOLS_ENABLED
+	// When loading a resource on startup, we use the load_on_startup callback,
+	// which executes the loading in the EditorFileSystem. It can reimport
+	// the resource and retry the load, allowing the resource to be loaded
+	// even if it is not yet imported.
+	if (ResourceImporter::load_on_startup != nullptr) {
+		return ResourceImporter::load_on_startup(this, p_path, p_original_path, r_error, p_use_sub_threads, r_progress, p_cache_mode);
+	}
+#endif
+
+	return load_internal(p_path, p_original_path, r_error, p_use_sub_threads, r_progress, p_cache_mode);
+}
+
+Ref<Resource> ResourceFormatImporter::load_internal(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
 	PathAndType pat;
 	Error err = _get_path_and_type(p_path, pat);
 
