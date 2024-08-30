@@ -346,12 +346,11 @@ Error FBXDocument::_parse_nodes(Ref<FBXState> p_state) {
 		node.instantiate();
 
 		node->height = int(fbx_node->node_depth);
-
-		if (fbx_node->name.length > 0) {
+		if (fbx_node->is_root) {
+			node->set_name("RootNode");
+		} else if (fbx_node->name.length > 0) {
 			node->set_name(_as_string(fbx_node->name));
 			node->set_original_name(node->get_name());
-		} else if (fbx_node->is_root) {
-			node->set_name("RootNode");
 		}
 		if (fbx_node->camera) {
 			node->camera = fbx_node->camera->typed_id;
@@ -1076,13 +1075,15 @@ Error FBXDocument::_parse_images(Ref<FBXState> p_state, const String &p_base_pat
 			memcpy(data.ptrw(), fbx_texture_file.content.data, fbx_texture_file.content.size);
 		} else {
 			String base_dir = p_state->get_base_path();
-			Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path), "Texture2D");
-			if (texture.is_valid()) {
-				p_state->images.push_back(texture);
-				p_state->source_images.push_back(texture->get_image());
-				continue;
+			if (!FileAccess::exists(_get_texture_path(base_dir, path))) {
+				Ref<Texture2D> texture = ResourceLoader::load(_get_texture_path(base_dir, path));
+				if (texture.is_valid()) {
+					p_state->images.push_back(texture);
+					p_state->source_images.push_back(texture->get_image());
+					continue;
+				}
 			}
-			// Fallback to loading as byte array.
+			// This isn't a fallback anymore.
 			data = FileAccess::get_file_as_bytes(path);
 			if (data.size() == 0) {
 				WARN_PRINT(vformat("FBX: Image index '%d' couldn't be loaded from path: %s because there was no data to load. Skipping it.", texture_i, path));
@@ -2109,6 +2110,15 @@ Error FBXDocument::_parse(Ref<FBXState> p_state, String p_path, Ref<FileAccess> 
 		WARN_PRINT(vformat("FBX: ignored %d further ufbx warnings", ignored_warning_count));
 	}
 
+	document_extensions.clear();
+	for (Ref<GLTFDocumentExtension> ext : all_document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_preflight(p_state, p_state->json["extensionsUsed"]);
+		if (err == OK) {
+			document_extensions.push_back(ext);
+		}
+	}
+
 	err = _parse_fbx_state(p_state, p_path);
 	ERR_FAIL_COND_V(err != OK, err);
 
@@ -2137,6 +2147,27 @@ Node *FBXDocument::generate_scene(Ref<GLTFState> p_state, float p_bake_fps, bool
 			_import_animation(state, ap, i, p_trimming, p_remove_immutable_tracks);
 		}
 	}
+	for (KeyValue<GLTFNodeIndex, Node *> E : state->scene_nodes) {
+		ERR_CONTINUE(!E.value);
+		for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+			ERR_CONTINUE(ext.is_null());
+			Dictionary node_json;
+			if (state->json.has("nodes")) {
+				Array nodes = state->json["nodes"];
+				if (0 <= E.key && E.key < nodes.size()) {
+					node_json = nodes[E.key];
+				}
+			}
+			Ref<GLTFNode> gltf_node = state->nodes[E.key];
+			Error err = ext->import_node(p_state, gltf_node, node_json, E.value);
+			ERR_CONTINUE(err != OK);
+		}
+	}
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		Error err = ext->import_post(p_state, root);
+		ERR_CONTINUE(err != OK);
+	}
 	ERR_FAIL_NULL_V(root, nullptr);
 	return root;
 }
@@ -2155,12 +2186,11 @@ Error FBXDocument::append_from_buffer(PackedByteArray p_bytes, String p_base_pat
 	state->base_path = p_base_path.get_base_dir();
 	err = _parse(state, state->base_path, file_access);
 	ERR_FAIL_COND_V(err != OK, err);
-	// TODO: 202040118 // fire
-	// for (Ref<GLTFDocumentExtension> ext : get_all_gltf_document_extensions()) {
-	// 	ERR_CONTINUE(ext.is_null());
-	// 	err = ext->import_post_parse(state);
-	// 	ERR_FAIL_COND_V(err != OK, err);
-	// }
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_post_parse(state);
+		ERR_FAIL_COND_V(err != OK, err);
+	}
 	return OK;
 }
 
@@ -2254,12 +2284,11 @@ Error FBXDocument::append_from_file(String p_path, Ref<GLTFState> p_state, uint3
 	state->base_path = base_path;
 	err = _parse(p_state, base_path, file);
 	ERR_FAIL_COND_V(err != OK, err);
-	// TODO: 20240118 // fire
-	// for (Ref<GLTFDocumentExtension> ext : document_extensions) {
-	// 	ERR_CONTINUE(ext.is_null());
-	// 	err = ext->import_post_parse(p_state);
-	// 	ERR_FAIL_COND_V(err != OK, err);
-	// }
+	for (Ref<GLTFDocumentExtension> ext : document_extensions) {
+		ERR_CONTINUE(ext.is_null());
+		err = ext->import_post_parse(p_state);
+		ERR_FAIL_COND_V(err != OK, err);
+	}
 	return OK;
 }
 
