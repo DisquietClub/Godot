@@ -1888,7 +1888,7 @@ TEST_CASE("[String] validate_node_name") {
 	CHECK(name_with_invalid_chars.validate_node_name() == "Name with invalid characters ____removed!");
 }
 
-TEST_CASE("[String] validate_identifier") {
+TEST_CASE("[String] validate_ascii_identifier") {
 	String empty_string;
 	CHECK(empty_string.validate_ascii_identifier() == "_");
 
